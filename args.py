@@ -31,10 +31,10 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
         help='training mini-batch size',
     )
     parser.add_argument(
-        '--val_batch_size',
+        '--dev_batch_size',
         type=int,
-        default=100,
-        help='validation mini-batch size',
+        default=5,
+        help='development mini-batch size',
     )
     parser.add_argument(
         '--train_epochs',
@@ -77,6 +77,12 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
         action='store_true',
         help='Use this flag to avoid learning rate scheduling.',
     )
+    parser.add_argument(
+        '--dev_frac',
+        type=float,
+        default=0.1,
+        help='Indicates fraction of data to be partitioned into dev set.'
+    )
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
@@ -103,12 +109,6 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         type=str,
         default=None,
         help='Give the model a name that will be a part of the experiment path.',
-    )
-    parser.add_argument(
-        '--dev_frac',
-        type=float,
-        default=0.1,
-        help='Indicates fraction of data to be partitioned into dev set.'
     )
 
 def add_test_args(parser: argparse.ArgumentParser) -> None:

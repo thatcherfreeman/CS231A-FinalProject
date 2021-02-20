@@ -7,6 +7,7 @@ from torch import optim
 from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm # type: ignore
+import tensorflow as tf
 
 from args import add_train_args, add_experiment, add_common_args, save_arguments
 import models
@@ -14,8 +15,8 @@ import model_utils
 
 
 def train_model(
-    train_dl: data.DataLoader,
-    dev_dl: data.DataLoader,
+    train_ds: tf.data.Dataset,
+    dev_ds: tf.data.Dataset,
     model: nn.Module,
     optimizer: optim.Optimizer,
     lr_scheduler: optim.lr_scheduler._LRScheduler,
@@ -34,10 +35,11 @@ def train_model(
 
         # Training portion
         torch.cuda.empty_cache()
-        with tqdm(total=args.train_batch_size * len(train_dl)) as progress_bar:
+        with tqdm(total=args.train_batch_size * len(train_ds)) as progress_bar:
             model.train()
             # TODO: Read correct values from dataloader
-            for i, (x_batch, y_batch) in enumerate(train_dl):
+            for i, (x_batch, y_batch) in enumerate(train_ds.as_numpy_iterator()):
+                x_batch, y_batch = model_utils.preprocess_training_example(x_batch, y_batch)
                 x_batch = x_batch.to(device)
                 y_batch = y_batch.to(device)
 
@@ -54,7 +56,7 @@ def train_model(
 
                 progress_bar.update(len(x_batch))
                 progress_bar.set_postfix(loss=loss.item())
-                writer.add_scalar("train/Loss", loss, ((e - 1) * len(train_dl) + i) * args.train_batch_size)
+                writer.add_scalar("train/Loss", loss, ((e - 1) * len(train_ds) + i) * args.train_batch_size)
 
                 del x_batch
                 del y_batch
@@ -63,12 +65,13 @@ def train_model(
 
         # Validation portion
         torch.cuda.empty_cache()
-        with tqdm(total=args.val_batch_size * len(dev_dl)) as progress_bar:
+        with tqdm(total=args.val_batch_size * len(dev_ds)) as progress_bar:
             model.eval()
             val_loss = 0.0
             num_batches_processed = 0
             # TODO: Read correct values from dataloader
-            for i, (x_batch, y_batch) in enumerate(dev_dl):
+            for i, (x_batch, y_batch) in enumerate(dev_ds.as_numpy_iterator()):
+                x_batch, y_batch = model_utils.preprocess_test_example(x_batch, y_batch)
                 x_batch = x_batch.to(device)
                 y_batch = y_batch.to(device)
 
@@ -83,7 +86,7 @@ def train_model(
 
                 progress_bar.update(len(x_batch))
                 progress_bar.set_postfix(val_loss=val_loss / num_batches_processed)
-                writer.add_scalar("Val/Loss", loss, ((e - 1) * len(dev_dl) + i) * args.val_batch_size)
+                writer.add_scalar("Val/Loss", loss, ((e - 1) * len(dev_ds) + i) * args.val_batch_size)
 
                 del x_batch
                 del y_batch
@@ -119,9 +122,7 @@ def main():
     device = model_utils.get_device()
 
     # Load dataset from disk
-    # TODO
-    train_dl = None # TODO
-    dev_dl = None # TODO
+    train_ds, dev_ds = model_utils.load_training_data(args)
 
     # Initialize a model
     model = models.get_model(args.model)()
@@ -155,8 +156,8 @@ def main():
 
     # Train!
     trained_model = train_model(
-        train_dl,
-        dev_dl,
+        train_ds,
+        dev_ds,
         model,
         optimizer,
         scheduler,
