@@ -36,7 +36,7 @@ class E_resnet(nn.Module):
     '''
     def __init__(self, pretrained: bool=False):
         super(E_resnet, self).__init__()
-        original_model = resnet.resnet50(pretrained=pretrained)
+        original_model = resnet.resnet18(pretrained=pretrained)
         self.conv1 = original_model.conv1
         self.bn1 = original_model.bn1
         self.relu = original_model.relu
@@ -51,10 +51,10 @@ class E_resnet(nn.Module):
         Input x of shape N, C, H, W
                         (N, 3, 480, 640)
         Outputs:
-            block1 shape (N, 256, 120, 160)
-            block2 shape (N, 512, 60, 80)
-            block3 shape (N, 1024, 30, 40)
-            block4 shape (N, 2048, 15, 20)
+            block1 shape (N, 64, 120, 160)
+            block2 shape (N, 128, 60, 80)
+            block3 shape (N, 256, 30, 40)
+            block4 shape (N, 512, 15, 20)
         '''
         x = self.conv1(x)
         x = self.bn1(x)
@@ -76,12 +76,12 @@ class SkipDecoder(nn.Module):
     '''
     def __init__(self):
         super(SkipDecoder, self).__init__()
-        self.conv = nn.Conv2d(2048, 1024, kernel_size=1, stride=1, bias=False)
-        self.bn = nn.BatchNorm2d(1024)
-        self.up1 = UpProjection(1024, 512)
-        self.up2 = UpProjection(512, 256)
-        self.up3 = UpProjection(256, 128)
-        self.up4 = UpProjection(128, 64)
+        self.conv = nn.Conv2d(512, 256, kernel_size=1, stride=1, bias=False)
+        self.bn = nn.BatchNorm2d(256)
+        self.up1 = UpProjection(256, 128)
+        self.up2 = UpProjection(128, 64)
+        self.up3 = UpProjection(64, 64)
+        self.up4 = UpProjection(64, 64)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=5, padding=2, stride=1, bias=False)
         self.bn2 = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64, 1, kernel_size=5, padding=2, stride=1)
@@ -95,18 +95,18 @@ class SkipDecoder(nn.Module):
     ) -> torch.Tensor:
         '''
         Inputs:
-            block1 shape (N, 256, 120, 160)
-            block2 shape (N, 512, 60, 80)
-            block3 shape (N, 1024, 30, 40)
-            block4 shape (N, 2048, 15, 20)
+            block1 shape (N, 64, 120, 160)
+            block2 shape (N, 128, 60, 80)
+            block3 shape (N, 256, 30, 40)
+            block4 shape (N, 512, 15, 20)
         Outputs:
             Depth map of shape (N, 1, 480, 640)
         '''
-        x0 = F.relu(self.bn(self.conv(block4))) # N, 1024, 15, 20
-        x0 = F.interpolate(x0, scale_factor=2, align_corners=True, mode='bilinear') # N, 1024, 30, 40
-        x1 = self.up1(x0 + block3, 2) # N, 512, 60, 80
-        x2 = self.up2(x1 + block2, 2) # N, 256, 120, 160
-        x3 = self.up3(x2 + block1, 2) # N, 128, 240, 320
+        x0 = F.relu(self.bn(self.conv(block4))) # N, 256, 15, 20
+        x0 = F.interpolate(x0, scale_factor=2, align_corners=True, mode='bilinear') # N, 256, 30, 40
+        x1 = self.up1(x0 + block3, 2) # N, 128, 60, 80
+        x2 = self.up2(x1 + block2, 2) # N, 64, 120, 160
+        x3 = self.up3(x2 + block1, 2) # N, 64, 240, 320
         x4 = self.up4(x3, 2) # N, 64, 480, 640
         out = F.relu(self.bn2(self.conv2(x4))) # N, 64, 480, 640
         out = self.conv3(out) # N, 1, 480, 640
