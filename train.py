@@ -59,9 +59,9 @@ def train_model(
 
                 if (i + 1) % args.picture_frequency == 0:
                     model_utils.make_diagram(
-                        x_batch.numpy(),
-                        y_batch.numpy(),
-                        y_pred.detach().numpy(),
+                        x_batch.cpu().numpy(),
+                        y_batch.cpu().numpy(),
+                        y_pred.cpu().detach().numpy(),
                         f'{args.save_path}/{args.experiment}/diagram_{e}_{i+1}.png',
                     )
 

@@ -122,7 +122,7 @@ def make_diagram(image: np.ndarray, gt_depth: np.ndarray, pred_depth: np.ndarray
     pred_depth shape N, 1, H, W
     filename str to save image into
     '''
-    image = image[0]
+    image = image[0] / np.max(image[0])
     gt_depth = gt_depth[0, 0]
     pred_depth = pred_depth[0, 0]
     image = np.transpose(image, axes=(1, 2, 0))
@@ -142,7 +142,7 @@ def make_diagram(image: np.ndarray, gt_depth: np.ndarray, pred_depth: np.ndarray
     im = plt.imshow(pred_depth, cmap='gray', vmin=depth_min, vmax=depth_max)
     # _add_colorbar(im)
 
-    plt.savefig(filename)
+    plt.savefig(filename, dpi=640)
     plt.close()
 
 def _add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
