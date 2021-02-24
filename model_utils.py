@@ -98,7 +98,7 @@ def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple
 
 
 def l1_log_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
-    return torch.mean(torch.log(torch.abs(input - pos_target)))
+    return torch.mean(torch.abs(input - pos_target))
 
 def l1_norm_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
     return torch.mean(torch.abs(input - pos_target))

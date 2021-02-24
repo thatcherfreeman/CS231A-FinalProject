@@ -78,7 +78,6 @@ class SkipDecoder(nn.Module):
         super(SkipDecoder, self).__init__()
         self.conv = nn.Conv2d(512, 256, kernel_size=1, stride=1, bias=False)
         self.bn = nn.BatchNorm2d(256)
-        self.unpool = nn.MaxUnpool2d(kernel_size=2, stride=2)
         self.up1 = UpProjection(256, 128, 2)
         self.up2 = UpProjection(128, 64, 2)
         self.up3 = UpProjection(64, 64, 2)
@@ -104,8 +103,7 @@ class SkipDecoder(nn.Module):
             Depth map of shape (N, 1, 480, 640)
         '''
         x0 = F.relu(self.bn(self.conv(block4))) # N, 256, 15, 20
-        # x0 = F.interpolate(x0, scale_factor=2, align_corners=True, mode='bilinear') # N, 256, 30, 40
-        x0 = self.unpool(x0)
+        x0 = F.interpolate(x0, scale_factor=2, align_corners=True, mode='bilinear') # N, 256, 30, 40
         x1 = self.up1(x0) # N, 128, 60, 80
         x2 = self.up2(x1) # N, 64, 120, 160
         x3 = self.up3(x2) # N, 64, 240, 320
@@ -121,7 +119,6 @@ class UpProjection(nn.Sequential):
     def __init__(self, input_features: int, output_features: int, scale: int=2):
         super(UpProjection, self).__init__()
         self.scale = scale
-        self.unpool = nn.MaxUnpool2d(kernel_size=scale, stride=scale)
         self.conv1 = nn.Conv2d(input_features, output_features,
                                kernel_size=5, stride=1, padding=2, bias=False)
         self.bn1 = nn.BatchNorm2d(output_features)
@@ -140,8 +137,7 @@ class UpProjection(nn.Sequential):
         Outputs:
             out shape N, C', H*scale, W*scale
         '''
-        # x = F.interpolate(x, scale_factor=self.scale, mode='bilinear', align_corners=True)
-        x = self.unpool(x)
+        x = F.interpolate(x, scale_factor=self.scale, mode='bilinear', align_corners=True)
         x_conv1 = self.relu(self.bn1(self.conv1(x)))
         bran1 = self.bn1_2(self.conv1_2(x_conv1))
         bran2 = self.bn2(self.conv2(x))
