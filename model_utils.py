@@ -50,7 +50,7 @@ def load_training_data(args: argparse.Namespace) -> Tuple[tf.data.Dataset, tf.da
     return train_dataset, dev_dataset
 
 def load_test_data(args: argparse.Namespace) -> tf.data.Dataset:
-    test_dataset : tf.data.Dataset = tfds.load('nyu_depth_v2', split='test')
+    test_dataset : tf.data.Dataset = tfds.load('nyu_depth_v2', split='validation', as_supervised=True)
     test_dataset = test_dataset.batch(args.batch_size)
     return test_dataset
 
