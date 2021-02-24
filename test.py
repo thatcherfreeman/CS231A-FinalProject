@@ -21,16 +21,16 @@ def test_model(
 ) -> nn.Module:
 
     device = model_utils.get_device()
-    loss_fn = model_utils.l1_norm_loss # TODO: Use correct loss fn
+    loss_fn = model_utils.l1_log_loss # TODO: Use correct loss fn
 
     print('\nRunning test metrics...')
 
     # Forward inference on model
     print('  Running forward inference...')
-    num_correct = 0
     total = 0
+    total_pixels = 0
+    squared_error = 0
     with tqdm(total=args.batch_size * len(dev_dl)) as progress_bar:
-        # TODO: read correct values from dataloader
         for i, (x_batch, y_batch) in enumerate(dev_dl):
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
@@ -39,12 +39,15 @@ def test_model(
             y_pred = model(x_batch)
 
             # TODO: Process y_pred in the optimal way (round it off, etc)
-            y_pred = torch.round(y_pred)
+            # Maybe clamp from 0 to infty or something
 
             # TODO: Log statistics
             loss = loss_fn(y_pred, y_batch).item()
-            num_correct += torch.sum(y_pred == y_batch).item()
             total += len(len(x_batch))
+
+            # RMS calculation
+            squared_error += torch.sum(torch.pow(y_pred - y_batch, 2)).item()
+            total_pixels += np.prod(y_batch.shape)
 
             progress_bar.update(len(x_batch))
 
@@ -53,10 +56,10 @@ def test_model(
             del y_batch
 
 
-    print(f'\n  Calculating overall metrics...')
+    print('\n  Calculating overall metrics...')
     print()
     print('*' * 30)
-    print(f'Accuracy: {num_correct / total}')
+    print(f'Accuracy: {(squared_error / total_pixels)**0.5}')
     print('*' * 30)
 
     return model
@@ -67,12 +70,10 @@ def main():
     add_test_args(parser)
     add_common_args(parser)
     args = parser.parse_args()
-
     device = model_utils.get_device()
 
     # Load dataset from disk
-    # TODO: Load test data
-    dev_dl = None # TODO: make dataloader object
+    dev_dl = model_utils.load_test_data(args)
 
     # Initialize a model
     model = models.get_model(args.model)()

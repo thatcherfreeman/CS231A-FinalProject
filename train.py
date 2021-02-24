@@ -24,8 +24,8 @@ def train_model(
 ) -> nn.Module:
 
     device = model_utils.get_device()
-    loss_fn = nn.functional.binary_cross_entropy # TODO: Set this to the correct loss fn
-    val_loss_fn = model_utils.l1_norm_loss # TODO: Set this to the correct loss fn
+    loss_fn = model_utils.l1_log_loss # TODO: Set this to the correct loss fn
+    val_loss_fn = model_utils.l1_log_loss # TODO: Set this to the correct loss fn
     best_val_loss = torch.tensor(float('inf'))
     saved_checkpoints = []
     writer = SummaryWriter(log_dir=f'{args.log_dir}/{args.experiment}')
@@ -37,7 +37,6 @@ def train_model(
         torch.cuda.empty_cache()
         with tqdm(total=args.train_batch_size * len(train_ds)) as progress_bar:
             model.train()
-            # TODO: Read correct values from dataloader
             for i, (x_batch, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch, y_batch)
                 x_batch = x_batch.to(device)
@@ -69,7 +68,6 @@ def train_model(
             model.eval()
             val_loss = 0.0
             num_batches_processed = 0
-            # TODO: Read correct values from dataloader
             for i, (x_batch, y_batch) in enumerate(dev_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_test_example(x_batch, y_batch)
                 x_batch = x_batch.to(device)
@@ -77,7 +75,8 @@ def train_model(
 
                 # Forward pass on model in validation environment
                 y_pred = model(x_batch)
-                y_pred = torch.round(y_pred)
+
+                # TODO: Process y_pred in whatever way inference requires.
 
                 loss = val_loss_fn(y_pred, y_batch)
 

@@ -89,14 +89,8 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--model',
         type=str,
-        default='UNet',
+        default='Baseline',
         help='choose the model to train',
-    )
-    parser.add_argument(
-        '--dataset_dir',
-        type=str,
-        default='/home/cs224w/cs224w/',
-        help='path to directory containing .pkl files',
     )
     parser.add_argument(
         '--load_path',
@@ -110,6 +104,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         default=None,
         help='Give the model a name that will be a part of the experiment path.',
     )
+
 
 def add_test_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(

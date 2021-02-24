@@ -40,23 +40,28 @@ def load_training_data(args: argparse.Namespace) -> Tuple[tf.data.Dataset, tf.da
     Returns Training and Development datasets
     '''
     train_percent = f'[:{round(100 * (1 - args.dev_frac)):d}%]'
-    train_dataset : tf.data.Dataset = tfds.load('nyu_depth_v2', split=f'train{train_percent}')
-    train_dataset = train_dataset.batch(args.train_batch_size).shuffle(1000, reshuffle_each_iteration=True)
+    train_dataset : tf.data.Dataset = tfds.load('nyu_depth_v2', split=f'train{train_percent}', as_supervised=True)
+    train_dataset = train_dataset.batch(args.train_batch_size)
 
     dev_percent = f'[-{round(100 * (args.dev_frac)):d}%:]'
-    dev_dataset : tf.data.Dataset = tfds.load('nyu_depth_v2', split=f'train{dev_percent}')
+    dev_dataset : tf.data.Dataset = tfds.load('nyu_depth_v2', split=f'train{dev_percent}', as_supervised=True)
     dev_dataset = dev_dataset.batch(args.dev_batch_size)
     return train_dataset, dev_dataset
 
+def load_test_data(args: argparse.Namespace) -> tf.data.Dataset:
+    test_dataset : tf.data.Dataset = tfds.load('nyu_depth_v2', split='test')
+    test_dataset = test_dataset.batch(args.batch_size)
+    return test_dataset
 
-def preprocess_training_example(image: np.ndarray, depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
+
+def preprocess_training_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
     '''
-    @Param image ndarray of shape N, H, W, C
+    @Param image ndarray of shape N, C, H, W
     @Param depth ndarray of shape N, H, W
 
     @Returns Tuple of
-        image torch.Tensor of shape N, H', W', C
-        depth torch.Tensor of shape N, H', W'
+        image torch.Tensor of shape N, C, H', W'
+        depth torch.Tensor of shape N, 1, H', W'
 
     Apply preprocessing to training example
     - Convert to pytorch tensor
@@ -68,23 +73,30 @@ def preprocess_training_example(image: np.ndarray, depth: np.ndarray) -> Tuple[t
     '''
 
     # Consider moving to device before data augmentation.
-    return torch.Tensor(image), torch.Tensor(depth)
+    depth = torch.Tensor(np_depth)
+    depth = torch.unsqueeze(depth, 1)
+    return torch.Tensor(np_image), depth
 
-def preprocess_test_example(image: np.ndarray, depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
+def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
     '''
-    @Param image ndarray of shape N, H, W, C
+    @Param image ndarray of shape N, C, H, W
     @Param depth ndarray of shape N, H, W
 
     @Returns Tuple of
-        image torch.Tensor of shape N, H', W', C
-        depth torch.Tensor of shape N, H', W'
+        image torch.Tensor of shape N, C, H', W'
+        depth torch.Tensor of shape N, 1, H', W'
 
     Preprocessing to be done on test examples
     '''
     # Resize for model input if necessary
     # Don't do random crop/jitter/flip
-    return torch.Tensor(image), torch.Tensor(depth)
+    depth = torch.Tensor(np_depth)
+    depth = torch.unsqueeze(depth, 1)
+    return torch.Tensor(np_image), depth
 
+
+def l1_log_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
+    return torch.mean(torch.log(torch.abs(input - pos_target)))
 
 def l1_norm_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
     return torch.mean(torch.abs(input - pos_target))

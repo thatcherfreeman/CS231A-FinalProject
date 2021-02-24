@@ -1,148 +1,153 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 from typing import Tuple, Optional
+from torchvision.models import resnet
 
 
-class Encoder(nn.Module):
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        ksize: int = 5,
-        kstride: int = 2,
-    ):
-        super(Encoder, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-
-        self.conv1 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=ksize,
-            stride=kstride,
-            padding=(ksize-1)//2,
-            padding_mode='replicate',
-        )
-        self.relu1 = nn.LeakyReLU(0.2)
-        # self.pool = nn.MaxPool2d(2)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor: #-> Tuple[torch.Tensor, torch.Tensor]:
-        n, c, h, w = x.shape
-        assert c == self.in_channels
-        out = self.conv1(x)
-        out = self.relu1(out)
-        return out
-        # out_small = self.pool(out)
-        # return out_small, out
-
-
-class Decoder(nn.Module):
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        dropout_p: float,
-        up_ksize: int = 5,
-        up_kstride: int = 2,
-        ksize: int = 3,
-        kstride: int = 1,
-        use_relu: bool = True,
-    ):
-        super(Decoder, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.use_relu = use_relu
-
-        self.upres = nn.ConvTranspose2d(
-            in_channels,
-            out_channels,
-            kernel_size=up_ksize,
-            stride=up_kstride,
-            padding=(up_ksize-1)//2,
-            output_padding=1,
-            )
-        self.conv1 = nn.Conv2d(
-            out_channels * 2,
-            out_channels,
-            kernel_size=ksize,
-            stride=kstride,
-            padding=(ksize-1)//2,
-            padding_mode='replicate'
-        )
-        self.conv2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            kernel_size=ksize,
-            stride=kstride,
-            padding=(ksize-1)//2,
-            padding_mode='replicate'
-        )
-        self.relu1 = nn.ReLU()
-        self.relu2 = nn.ReLU()
-        self.relu3 = nn.ReLU()
-        self.dropout = nn.Dropout(dropout_p)
-
-    def forward(self, x_small: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-        n_small, c_small, h_small, w_small = x_small.shape
-        assert c_small == self.in_channels
-        x_big = self.upres(x_small)
-        x_big = self.relu1(x_big)
-        assert x_big.shape == x.shape
-        x_cat = torch.cat([x_big, x], dim=1)
-        out = self.conv1(x_cat)
-        out = self.relu2(out)
-        out = self.conv2(out)
-
-        if self.use_relu:
-            out = self.relu3(out)
-        out = self.dropout(out)
-        return out
-
-
-class UNet(nn.Module):
-    def __init__(self, num_features: Optional[int] = None, drop_p: float = 0.5):
-        super(UNet, self).__init__()
-        layer_channels = [1, 16, 32, 64, 128, 256 , 512]
-
-        self.encoder1 = Encoder(1, 16)
-        self.encoder2 = Encoder(16, 32)
-        self.encoder3 = Encoder(32, 64)
-        self.encoder4 = Encoder(64, 128)
-        self.encoder5 = Encoder(128, 256)
-        self.encoder6 = Encoder(256, 512)
-
-        self.decoder6 = Decoder(512, 256, drop_p)
-        self.decoder5 = Decoder(256, 128, drop_p)
-        self.decoder4 = Decoder(128, 64, drop_p)
-        self.decoder3 = Decoder(64, 32, 0)
-        self.decoder2 = Decoder(32, 16, 0)
-        self.decoder1 = Decoder(16, 1, 0, use_relu=False) # A little questionable, maybe should be conv layer
-
-        self.sigmoid = nn.ReLU()
+class Baseline(nn.Module):
+    '''
+    Baseline U-net model, consisting of pretrained resnet encoder
+    and a decoder with skip connections.
+    '''
+    def __init__(self):
+        super(Baseline, self).__init__()
+        self.encoder = E_resnet(pretrained=True)
+        self.decoder = SkipDecoder()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        assert x.dtype == torch.float32
-        assert len(x.shape) == 4
-        e_out1 = self.encoder1(x)
-        e_out2 = self.encoder2(e_out1)
-        e_out3 = self.encoder3(e_out2)
-        e_out4 = self.encoder4(e_out3)
-        e_out5 = self.encoder5(e_out4)
-        e_out6 = self.encoder6(e_out5)
+        '''
+        Input:
+            x shape N, C, H, W
+        Output:
+            y shape N, 1, H, W
+        '''
+        block1, block2, block3, block4 = self.encoder(x)
+        out = self.decoder(block1, block2, block3, block4)
+        return out
 
-        d_out5 = self.decoder6(e_out6, e_out5)
-        d_out4 = self.decoder5(d_out5, e_out4)
-        d_out3 = self.decoder4(d_out4, e_out3)
-        d_out2 = self.decoder3(d_out3, e_out2)
-        d_out1 = self.decoder2(d_out2, e_out1)
-        out    = self.decoder1(d_out1, x) # Not sure on this part lol
 
-        out = self.sigmoid(out)
-        return out, x - out
+# Adapted from
+# https://github.com/JunjH/Revisiting_Single_Depth_Estimation/blob/master/models/modules.py#L40-L66
+class E_resnet(nn.Module):
+    '''
+    Standard Resnet50 implementation, excluding the output layers.
+    Modified to output intermediate layer results.
+    '''
+    def __init__(self, pretrained: bool=False):
+        super(E_resnet, self).__init__()
+        original_model = resnet.resnet50(pretrained=pretrained)
+        self.conv1 = original_model.conv1
+        self.bn1 = original_model.bn1
+        self.relu = original_model.relu
+        self.maxpool = original_model.maxpool
+        self.layer1 = original_model.layer1
+        self.layer2 = original_model.layer2
+        self.layer3 = original_model.layer3
+        self.layer4 = original_model.layer4
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        '''
+        Input x of shape N, C, H, W
+                        (N, 3, 480, 640)
+        Outputs:
+            block1 shape (N, 256, 120, 160)
+            block2 shape (N, 512, 60, 80)
+            block3 shape (N, 1024, 30, 40)
+            block4 shape (N, 2048, 15, 20)
+        '''
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        x_block1 = self.layer1(x)
+        x_block2 = self.layer2(x_block1)
+        x_block3 = self.layer3(x_block2)
+        x_block4 = self.layer4(x_block3)
+        return x_block1, x_block2, x_block3, x_block4
+
+
+# Based on the decoder class here
+# https://github.com/JunjH/Revisiting_Single_Depth_Estimation/blob/master/models/modules.py#L118-L151
+# However, altered to have skip connections and make a model output directly.
+class SkipDecoder(nn.Module):
+    '''
+    Decoder with skip connections from encoder blocks
+    '''
+    def __init__(self):
+        super(SkipDecoder, self).__init__()
+        self.conv = nn.Conv2d(2048, 1024, kernel_size=1, stride=1, bias=False)
+        self.bn = nn.BatchNorm2d(1024)
+        self.up1 = UpProjection(1024, 1024)
+        self.up2 = UpProjection(2048, 512)
+        self.up3 = UpProjection(1024, 256)
+        self.up4 = UpProjection(512, 128)
+        self.up5 = UpProjection(128, 64)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=5, padding=2, stride=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(64, 1, kernel_size=5, padding=2, stride=1)
+
+    def forward(
+        self,
+        block1: torch.Tensor,
+        block2: torch.Tensor,
+        block3: torch.Tensor,
+        block4: torch.Tensor
+    ) -> torch.Tensor:
+        '''
+        Inputs:
+            block1 shape (N, 256, 120, 160)
+            block2 shape (N, 512, 60, 80)
+            block3 shape (N, 1024, 30, 40)
+            block4 shape (N, 2048, 15, 20)
+        Outputs:
+            Depth map of shape (N, 1, 480, 640)
+        '''
+        x0 = F.relu(self.bn(self.conv(block4))) # N, 1024, 15, 20
+        x1 = self.up1(x0, 2) # N, 1024, 30, 40
+        x2 = self.up2(torch.cat([x1, block3], dim=1), 2) # N, 512, 60, 80
+        x3 = self.up3(torch.cat([x2, block2], dim=1), 2) # N, 256, 120, 160
+        x4 = self.up4(torch.cat([x3, block1], dim=1), 2) # N, 128, 240, 320
+        x5 = self.up5(x4, 2) # N, 64, 480, 640
+        out = F.relu(self.bn2(self.conv2(x5))) # N, 64, 480, 640
+        out = self.conv3(out) # N, 1, 480, 640
+        return out
+
+
+# Copied from
+# https://github.com/JunjH/Revisiting_Single_Depth_Estimation/blob/master/models/modules.py#L13-L38
+class UpProjection(nn.Sequential):
+    def __init__(self, input_features: int, output_features: int):
+        super(UpProjection, self).__init__()
+        self.conv1 = nn.Conv2d(input_features, output_features,
+                               kernel_size=5, stride=1, padding=2, bias=False)
+        self.bn1 = nn.BatchNorm2d(output_features)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1_2 = nn.Conv2d(output_features, output_features,
+                                 kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1_2 = nn.BatchNorm2d(output_features)
+        self.conv2 = nn.Conv2d(input_features, output_features,
+                               kernel_size=5, stride=1, padding=2, bias=False)
+        self.bn2 = nn.BatchNorm2d(output_features)
+
+    def forward(self, x: torch.Tensor, scale: int) -> torch.Tensor:
+        '''
+        Inputs:
+            x shape N, C, H, W
+            scale int
+        Outputs:
+            out shape N, C', H*scale, W*scale
+        '''
+        x = F.interpolate(x, scale_factor=scale, mode='bilinear', align_corners=True)
+        x_conv1 = self.relu(self.bn1(self.conv1(x)))
+        bran1 = self.bn1_2(self.conv1_2(x_conv1))
+        bran2 = self.bn2(self.conv2(x))
+        out = self.relu(bran1 + bran2)
+        return out
 
 
 def get_model(model_name: str) -> type:
-    models = [UNet]
+    models = [Baseline]
     for m in models:
         if m.__name__ == model_name:
             return m
