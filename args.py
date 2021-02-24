@@ -81,7 +81,13 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
         '--dev_frac',
         type=float,
         default=0.1,
-        help='Indicates fraction of data to be partitioned into dev set.'
+        help='Indicates fraction of data to be partitioned into dev set.',
+    )
+    parser.add_argument(
+        '--picture_frequency',
+        type=int,
+        default=10000,
+        help='Every x batches, save image of predicted depth map.',
     )
 
 

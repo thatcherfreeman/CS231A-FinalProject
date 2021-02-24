@@ -57,6 +57,15 @@ def train_model(
                 progress_bar.set_postfix(loss=loss.item())
                 writer.add_scalar("train/Loss", loss, ((e - 1) * len(train_ds) + i) * args.train_batch_size)
 
+                if (i + 1) % args.picture_frequency == 0:
+                    model_utils.make_diagram(
+                        x_batch.numpy(),
+                        y_batch.numpy(),
+                        y_pred.detach().numpy(),
+                        f'{args.save_path}/{args.experiment}/diagram_{e}_{i+1}.png',
+                    )
+
+
                 del x_batch
                 del y_batch
                 del y_pred

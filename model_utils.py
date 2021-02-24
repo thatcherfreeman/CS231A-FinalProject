@@ -2,17 +2,18 @@ import argparse
 import os
 from typing import Tuple, List
 import random
-
 import pickle
+
+import matplotlib.pyplot as plt
+from mpl_toolkits import axes_grid1
 import numpy as np # type: ignore
 import torch
 from torch import nn
 from tqdm import tqdm # type: ignore
-
-import models
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
+import models
 
 def save_model(model: nn.Module, path: str) -> nn.Module:
     model = model.cpu()
@@ -113,3 +114,43 @@ def verify_versions() -> None:
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def make_diagram(image: np.ndarray, gt_depth: np.ndarray, pred_depth: np.ndarray, filename: str):
+    '''
+    image shape N, 3, H, W
+    gt_depth shape N, 1, H, W
+    pred_depth shape N, 1, H, W
+    filename str to save image into
+    '''
+    image = image[0]
+    gt_depth = gt_depth[0, 0]
+    pred_depth = pred_depth[0, 0]
+    image = np.transpose(image, axes=(1, 2, 0))
+
+
+    depth_min = 0
+    depth_max = max(np.max(pred_depth), np.max(gt_depth))
+    plt.figure(figsize=(5,1.5))
+    plt.subplot(1, 3, 1)
+    plt.axis('off')
+    plt.imshow(image)
+    plt.subplot(1, 3, 2)
+    plt.axis('off')
+    plt.imshow(gt_depth, cmap='gray', vmin=depth_min, vmax=depth_max)
+    plt.subplot(1, 3, 3)
+    plt.axis('off')
+    im = plt.imshow(pred_depth, cmap='gray', vmin=depth_min, vmax=depth_max)
+    # _add_colorbar(im)
+
+    plt.savefig(filename)
+    plt.close()
+
+def _add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
+    """Add a vertical color bar to an image plot."""
+    divider = axes_grid1.make_axes_locatable(im.axes)
+    width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
+    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+    current_ax = plt.gca()
+    cax = divider.append_axes("right", size=width, pad=pad)
+    plt.sca(current_ax)
+    return im.axes.figure.colorbar(im, cax=cax, **kwargs)
