@@ -73,7 +73,7 @@ def train_model(
 
         # Validation portion
         torch.cuda.empty_cache()
-        with tqdm(total=args.val_batch_size * len(dev_ds)) as progress_bar:
+        with tqdm(total=args.dev_batch_size * len(dev_ds)) as progress_bar:
             model.eval()
             val_loss = 0.0
             num_batches_processed = 0
@@ -94,7 +94,7 @@ def train_model(
 
                 progress_bar.update(len(x_batch))
                 progress_bar.set_postfix(val_loss=val_loss / num_batches_processed)
-                writer.add_scalar("Val/Loss", loss, ((e - 1) * len(dev_ds) + i) * args.val_batch_size)
+                writer.add_scalar("Val/Loss", loss, ((e - 1) * len(dev_ds) + i) * args.dev_batch_size)
 
                 del x_batch
                 del y_batch

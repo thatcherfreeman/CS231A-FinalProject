@@ -80,7 +80,7 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--dev_frac',
         type=float,
-        default=0.1,
+        default=0.03,
         help='Indicates fraction of data to be partitioned into dev set.',
     )
     parser.add_argument(
