@@ -82,9 +82,9 @@ class SkipDecoder(nn.Module):
         self.up2 = UpProjection(128, 64, 2)
         self.up3 = UpProjection(64, 64, 2)
         self.up4 = UpProjection(64, 64, 2)
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=5, padding=2, stride=1, bias=False)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, padding=1, stride=1, bias=False)
         self.bn2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(64, 1, kernel_size=5, padding=2, stride=1)
+        self.conv3 = nn.Conv2d(64, 1, kernel_size=3, padding=1, stride=1)
 
     def forward(
         self,
@@ -120,14 +120,14 @@ class UpProjection(nn.Sequential):
         super(UpProjection, self).__init__()
         self.scale = scale
         self.conv1 = nn.Conv2d(input_features, output_features,
-                               kernel_size=5, stride=1, padding=2, bias=False)
+                               kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(output_features)
         self.relu = nn.ReLU(inplace=True)
         self.conv1_2 = nn.Conv2d(output_features, output_features,
                                  kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1_2 = nn.BatchNorm2d(output_features)
         self.conv2 = nn.Conv2d(input_features, output_features,
-                               kernel_size=5, stride=1, padding=2, bias=False)
+                               kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(output_features)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
