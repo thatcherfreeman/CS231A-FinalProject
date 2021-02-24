@@ -78,11 +78,10 @@ class SkipDecoder(nn.Module):
         super(SkipDecoder, self).__init__()
         self.conv = nn.Conv2d(2048, 1024, kernel_size=1, stride=1, bias=False)
         self.bn = nn.BatchNorm2d(1024)
-        self.up1 = UpProjection(1024, 1024)
-        self.up2 = UpProjection(2048, 512)
-        self.up3 = UpProjection(1024, 256)
-        self.up4 = UpProjection(512, 128)
-        self.up5 = UpProjection(128, 64)
+        self.up1 = UpProjection(1024, 512)
+        self.up2 = UpProjection(512, 256)
+        self.up3 = UpProjection(256, 128)
+        self.up4 = UpProjection(128, 64)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=5, padding=2, stride=1, bias=False)
         self.bn2 = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64, 1, kernel_size=5, padding=2, stride=1)
@@ -104,12 +103,12 @@ class SkipDecoder(nn.Module):
             Depth map of shape (N, 1, 480, 640)
         '''
         x0 = F.relu(self.bn(self.conv(block4))) # N, 1024, 15, 20
-        x1 = self.up1(x0, 2) # N, 1024, 30, 40
-        x2 = self.up2(torch.cat([x1, block3], dim=1), 2) # N, 512, 60, 80
-        x3 = self.up3(torch.cat([x2, block2], dim=1), 2) # N, 256, 120, 160
-        x4 = self.up4(torch.cat([x3, block1], dim=1), 2) # N, 128, 240, 320
-        x5 = self.up5(x4, 2) # N, 64, 480, 640
-        out = F.relu(self.bn2(self.conv2(x5))) # N, 64, 480, 640
+        x0 = F.interpolate(x0, scale_factor=2, align_corners=True, mode='bilinear') # N, 1024, 30, 40
+        x1 = self.up1(x0 + block3, 2) # N, 512, 60, 80
+        x2 = self.up2(x1 + block2, 2) # N, 256, 120, 160
+        x3 = self.up3(x2 + block1, 2) # N, 128, 240, 320
+        x4 = self.up4(x3, 2) # N, 64, 480, 640
+        out = F.relu(self.bn2(self.conv2(x4))) # N, 64, 480, 640
         out = self.conv3(out) # N, 1, 480, 640
         return out
 
