@@ -27,26 +27,32 @@ def test_model(
 
     # Forward inference on model
     print('  Running forward inference...')
-    total = 0
     total_pixels = 0
     squared_error = 0
+    rel_error = 0
+    log_error = 0
+    threshold1 = 0 # 1.25
+    threshold2 = 0 # 1.25^2
+    threshold3 = 0 # corresponds to 1.25^3
     with tqdm(total=args.batch_size * len(dev_dl)) as progress_bar:
         for i, (x_batch, y_batch) in enumerate(dev_dl):
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
 
             # Forward pass on model
-            y_pred = model(x_batch)
+            y_pred = model(x_batch).detach()
 
             # TODO: Process y_pred in the optimal way (round it off, etc)
             # Maybe clamp from 0 to infty or something
 
-            # TODO: Log statistics
-            loss = loss_fn(y_pred, y_batch).item()
-            total += len(len(x_batch))
 
-            # RMS calculation
+            # RMS, REL, LOG10, threshold calculation
             squared_error += torch.sum(torch.pow(y_pred - y_batch, 2)).item()
+            rel_error += torch.sum(torch.abs(y_pred - y_batch) / y_batch)
+            log_error += torch.sum(torch.abs(torch.log10(y_pred) - torch.log10(y_batch)))
+            threshold1 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25)
+            threshold2 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**2)
+            threshold3 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**3)
             total_pixels += np.prod(y_batch.shape)
 
             progress_bar.update(len(x_batch))
@@ -59,7 +65,12 @@ def test_model(
     print('\n  Calculating overall metrics...')
     print()
     print('*' * 30)
-    print(f'Accuracy: {(squared_error / total_pixels)**0.5}')
+    print(f'RMS:   {(squared_error / total_pixels)**0.5}')
+    print(f'REL:   {rel_error / total_pixels}')
+    print(f'LOG10: {log_error / total_pixels}')
+    print(f'delta1:{threshold1 / total_pixels}')
+    print(f'delta2:{threshold2 / total_pixels}')
+    print(f'delta3:{threshold3 / total_pixels}')
     print('*' * 30)
 
     return model
