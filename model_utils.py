@@ -56,7 +56,7 @@ def load_test_data(args: argparse.Namespace) -> tf.data.Dataset:
 
 def preprocess_training_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
     '''
-    @Param image ndarray of shape N, C, H, W
+    @Param image ndarray of shape N, H, W, C
     @Param depth ndarray of shape N, H, W
 
     @Returns Tuple of
@@ -75,11 +75,12 @@ def preprocess_training_example(np_image: np.ndarray, np_depth: np.ndarray) -> T
     # Consider moving to device before data augmentation.
     depth = torch.Tensor(np_depth)
     depth = torch.unsqueeze(depth, 1)
-    return torch.Tensor(np_image), depth
+    image = torch.Tensor(np_image).permute(0, 3, 1, 2)
+    return image, depth
 
 def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
     '''
-    @Param image ndarray of shape N, C, H, W
+    @Param image ndarray of shape N, H, W, C
     @Param depth ndarray of shape N, H, W
 
     @Returns Tuple of
@@ -92,7 +93,8 @@ def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple
     # Don't do random crop/jitter/flip
     depth = torch.Tensor(np_depth)
     depth = torch.unsqueeze(depth, 1)
-    return torch.Tensor(np_image), depth
+    image = torch.Tensor(np_image).permute(0, 3, 1, 2)
+    return image, depth
 
 
 def l1_log_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
