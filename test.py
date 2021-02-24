@@ -21,12 +21,8 @@ def test_model(
 ) -> nn.Module:
 
     device = model_utils.get_device()
-    loss_fn = model_utils.l1_log_loss # TODO: Use correct loss fn
 
-    print('\nRunning test metrics...')
-
-    # Forward inference on model
-    print('  Running forward inference...')
+    print('\Computing evaluation metrics...')
     total_pixels = 0
     squared_error = 0
     rel_error = 0
@@ -34,6 +30,9 @@ def test_model(
     threshold1 = 0 # 1.25
     threshold2 = 0 # 1.25^2
     threshold3 = 0 # corresponds to 1.25^3
+
+    print('  Running forward inference...')
+    torch.set_grad_enabled(False)
     with tqdm(total=args.batch_size * len(dev_dl)) as progress_bar:
         for i, (x_batch, y_batch) in enumerate(dev_dl):
             x_batch = x_batch.to(device)
@@ -45,14 +44,13 @@ def test_model(
             # TODO: Process y_pred in the optimal way (round it off, etc)
             # Maybe clamp from 0 to infty or something
 
-
             # RMS, REL, LOG10, threshold calculation
             squared_error += torch.sum(torch.pow(y_pred - y_batch, 2)).item()
-            rel_error += torch.sum(torch.abs(y_pred - y_batch) / y_batch)
-            log_error += torch.sum(torch.abs(torch.log10(y_pred) - torch.log10(y_batch)))
-            threshold1 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25)
-            threshold2 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**2)
-            threshold3 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**3)
+            rel_error += torch.sum(torch.abs(y_pred - y_batch) / y_batch).item()
+            log_error += torch.sum(torch.abs(torch.log10(y_pred) - torch.log10(y_batch))).item()
+            threshold1 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25).item()
+            threshold2 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**2).item()
+            threshold3 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**3).item()
             total_pixels += np.prod(y_batch.shape)
 
             progress_bar.update(len(x_batch))
@@ -60,7 +58,6 @@ def test_model(
             del x_batch
             del y_pred
             del y_batch
-
 
     print('\n  Calculating overall metrics...')
     print()

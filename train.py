@@ -24,8 +24,8 @@ def train_model(
 ) -> nn.Module:
 
     device = model_utils.get_device()
-    loss_fn = model_utils.l1_log_loss # TODO: Set this to the correct loss fn
-    val_loss_fn = model_utils.l1_log_loss # TODO: Set this to the correct loss fn
+    loss_fn = model_utils.l1_norm_loss # TODO: Set this to the correct loss fn
+    val_loss_fn = model_utils.l1_norm_loss # TODO: Set this to the correct loss fn
     best_val_loss = torch.tensor(float('inf'))
     saved_checkpoints = []
     writer = SummaryWriter(log_dir=f'{args.log_dir}/{args.experiment}')
@@ -57,6 +57,7 @@ def train_model(
                 progress_bar.set_postfix(loss=loss.item())
                 writer.add_scalar("train/Loss", loss, ((e - 1) * len(train_ds) + i) * args.train_batch_size)
 
+                # Periodically save a diagram
                 if (i + 1) % args.picture_frequency == 0:
                     model_utils.make_diagram(
                         x_batch.cpu().numpy(),
@@ -64,7 +65,6 @@ def train_model(
                         y_pred.cpu().detach().numpy(),
                         f'{args.save_path}/{args.experiment}/diagram_{e}_{i+1}.png',
                     )
-
 
                 del x_batch
                 del y_batch
