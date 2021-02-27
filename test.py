@@ -31,6 +31,7 @@ def test_model(
     threshold1 = 0 # 1.25
     threshold2 = 0 # 1.25^2
     threshold3 = 0 # corresponds to 1.25^3
+    eps = 1e-15
 
     print('  Running forward inference...')
     torch.set_grad_enabled(False)
@@ -49,7 +50,7 @@ def test_model(
             # RMS, REL, LOG10, threshold calculation
             squared_error += torch.sum(torch.pow(y_pred - y_batch, 2)).item()
             rel_error += torch.sum(torch.abs(y_pred - y_batch) / y_batch).item()
-            log_error += torch.sum(torch.abs(torch.log10(y_pred) - torch.log10(y_batch))).item()
+            log_error += torch.sum(torch.abs(torch.log10(y_pred / (y_batch + eps)))).item()
             threshold1 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25).item()
             threshold2 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**2).item()
             threshold3 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**3).item()

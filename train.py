@@ -8,6 +8,7 @@ from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm # type: ignore
 import tensorflow as tf
+import numpy as np
 
 from args import add_train_args, add_experiment, add_common_args, save_arguments
 import models
@@ -91,14 +92,13 @@ def train_model(
                 # Periodically save a diagram
                 if (i + 1) % args.picture_frequency == 0:
                     model_utils.make_diagram(
-                        x_batch_orig.cpu().numpy(),
+                        np.transpose(x_batch_orig, (0, 3, 1, 2)),
                         x_batch.cpu().numpy(),
                         y_batch.cpu().numpy(),
                         y_pred.cpu().detach().numpy(),
                         f'{args.save_path}/{args.experiment}/diagram_{e}_{i+1}.png',
                     )
 
-                del x_batch_orig
                 del x_batch
                 del y_batch
                 del y_pred

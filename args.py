@@ -39,7 +39,7 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--train_epochs',
         type=int,
-        default=30,
+        default=3,
         help='Number of epochs to train for',
     )
     parser.add_argument(
