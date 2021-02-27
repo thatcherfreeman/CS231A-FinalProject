@@ -6,6 +6,7 @@ import torch
 from torch import nn
 from torch import optim
 from torch.utils import data
+import tensorflow as tf
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm # type: ignore
 
@@ -15,7 +16,7 @@ import model_utils
 
 
 def test_model(
-    dev_dl: data.DataLoader,
+    dev_dl: tf.data.Dataset,
     model: nn.Module,
     args: argparse.Namespace,
 ) -> nn.Module:
@@ -34,7 +35,8 @@ def test_model(
     print('  Running forward inference...')
     torch.set_grad_enabled(False)
     with tqdm(total=args.batch_size * len(dev_dl)) as progress_bar:
-        for i, (x_batch, y_batch) in enumerate(dev_dl):
+        for i, (x_batch_orig, y_batch) in enumerate(dev_dl.as_numpy_iterator()):
+            x_batch, y_batch = model_utils.preprocess_test_example(x_batch_orig, y_batch)
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
 
