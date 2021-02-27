@@ -9,7 +9,9 @@ from mpl_toolkits import axes_grid1
 import numpy as np # type: ignore
 import torch
 from torch import nn
+from torchvision.transforms import functional as tv_f
 from tqdm import tqdm # type: ignore
+from torchvision import transforms
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
@@ -57,16 +59,15 @@ def load_test_data(args: argparse.Namespace) -> tf.data.Dataset:
 
 def preprocess_training_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
     '''
-    @Param image ndarray of shape N, H, W, C
+    @Param image ndarray of shape N, H, W, C, values [0...255]
     @Param depth ndarray of shape N, H, W
 
     @Returns Tuple of
-        image torch.Tensor of shape N, C, H', W'
+        image torch.Tensor of shape N, C, H', W', values [0...255]
         depth torch.Tensor of shape N, 1, H', W'
 
     Apply preprocessing to training example
     - Convert to pytorch tensor
-    TODO:
     - Random crop
     - Color jitter
     - Random flip
@@ -77,6 +78,33 @@ def preprocess_training_example(np_image: np.ndarray, np_depth: np.ndarray) -> T
     depth = torch.Tensor(np_depth)
     depth = torch.unsqueeze(depth, 1)
     image = torch.Tensor(np_image).permute(0, 3, 1, 2)
+
+    N, C, H, W = image.size()
+
+    # Color Jitter
+    image = image / 255 # colorjitter caps at 1.0
+    image = transforms.ColorJitter(0.4, 0.4, 0.4, 0)(image)
+    image = image * 255
+
+    # Rotation
+    angle = transforms.RandomRotation.get_params([-5, 5])
+    image = tv_f.rotate(image, angle, resample=2)
+    depth = tv_f.rotate(depth, angle, resample=2)
+
+    # Random Crop
+    i, j, h, w = transforms.RandomResizedCrop.get_params(image, (0.8, 1.0), (W/H, W/H))
+    image = tv_f.crop(image, i, j, h, w)
+    depth = tv_f.crop(depth, i, j, h, w)
+
+    # Resize to output dimensions
+    image = tv_f.resize(image, (H, W))
+    depth = tv_f.resize(depth, (H, W))
+
+    # Random Flip
+    if torch.rand(1) > 0.5:
+        image = tv_f.hflip(image)
+        depth = tv_f.hflip(depth)
+
     return image, depth
 
 def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -115,29 +143,34 @@ def verify_versions() -> None:
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def make_diagram(image: np.ndarray, gt_depth: np.ndarray, pred_depth: np.ndarray, filename: str):
+def make_diagram(image: np.ndarray, input_image: np.ndarray, gt_depth: np.ndarray, pred_depth: np.ndarray, filename: str):
     '''
     image shape N, 3, H, W
+    input_image shape N, 3, H, W
     gt_depth shape N, 1, H, W
     pred_depth shape N, 1, H, W
     filename str to save image into
     '''
-    image = image[0] / np.max(image[0])
+    image = np.clip(image[0] / 255, 0, 1)
+    input_image = np.clip(input_image[0] / 255, 0, 1)
     gt_depth = gt_depth[0, 0]
     pred_depth = pred_depth[0, 0]
     image = np.transpose(image, axes=(1, 2, 0))
-
+    input_image = np.transpose(input_image, axes=(1, 2, 0))
 
     depth_min = 0
     depth_max = max(np.max(pred_depth), np.max(gt_depth))
-    plt.figure(figsize=(5,1.5))
-    plt.subplot(1, 3, 1)
+    plt.figure(figsize=(6,1.25))
+    plt.subplot(1, 4, 1)
     plt.axis('off')
     plt.imshow(image)
-    plt.subplot(1, 3, 2)
+    plt.subplot(1, 4, 2)
+    plt.axis('off')
+    plt.imshow(input_image)
+    plt.subplot(1, 4, 3)
     plt.axis('off')
     plt.imshow(gt_depth, cmap='gray', vmin=depth_min, vmax=depth_max)
-    plt.subplot(1, 3, 3)
+    plt.subplot(1, 4, 4)
     plt.axis('off')
     im = plt.imshow(pred_depth, cmap='gray', vmin=depth_min, vmax=depth_max)
     # _add_colorbar(im)

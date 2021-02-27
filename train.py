@@ -41,8 +41,8 @@ def train_model(
         torch.cuda.empty_cache()
         with tqdm(total=args.train_batch_size * len(train_ds)) as progress_bar:
             model.train()
-            for i, (x_batch, y_batch) in enumerate(train_ds.as_numpy_iterator()):
-                x_batch, y_batch = model_utils.preprocess_training_example(x_batch, y_batch)
+            for i, (x_batch_orig, y_batch) in enumerate(train_ds.as_numpy_iterator()):
+                x_batch, y_batch = model_utils.preprocess_training_example(x_batch_orig, y_batch)
                 x_batch = x_batch.to(device)
                 y_batch = y_batch.to(device)
                 # y_batch = y_batch.cuda(non_blocking=True)
@@ -91,12 +91,14 @@ def train_model(
                 # Periodically save a diagram
                 if (i + 1) % args.picture_frequency == 0:
                     model_utils.make_diagram(
+                        x_batch_orig.cpu().numpy(),
                         x_batch.cpu().numpy(),
                         y_batch.cpu().numpy(),
                         y_pred.cpu().detach().numpy(),
                         f'{args.save_path}/{args.experiment}/diagram_{e}_{i+1}.png',
                     )
 
+                del x_batch_orig
                 del x_batch
                 del y_batch
                 del y_pred
