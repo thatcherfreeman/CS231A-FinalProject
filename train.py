@@ -30,6 +30,12 @@ def train_model(
     saved_checkpoints = []
     writer = SummaryWriter(log_dir=f'{args.log_dir}/{args.experiment}')
 
+    criterion = nn.L1Loss()
+    batch_time = AverageMeter()
+    losses = AverageMeter()
+    cos = nn.CosineSimilarity(dim=1, eps=0)
+    get_gradient = sobel.Sobel().cuda()
+
     for e in range(1, args.train_epochs + 1):
         print(f'Training epoch {e}...')
 
@@ -39,13 +45,41 @@ def train_model(
             model.train()
             for i, (x_batch, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch, y_batch)
-                x_batch = x_batch.to(device)
-                y_batch = y_batch.to(device)
+                # x_batch = x_batch.to(device)
+                # y_batch = y_batch.to(device)
+                y_batch = y_batch.cuda(non_blocking=True)
+                x_batch = x_batch.cuda()
+                x_batch = torch.autograd.Variable(x_batch)
+                y_batch = torch.autograd.Variable(y_batch)
+
+                ones = torch.ones(y_batch.size(0), 1, y_batch.size(2),y_batch.size(3)).float().cuda()
+                ones = torch.autograd.Variable(ones)
 
                 # Forward pass on model
                 optimizer.zero_grad()
                 y_pred = model(x_batch)
-                loss = loss_fn(y_pred, y_batch)
+
+                depth_grad = get_gradient(y_batch)
+                output_grad = get_gradient(y_pred)
+                depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(y_batch)
+                depth_grad_dy = depth_grad[:, 1, :, :].contiguous().view_as(y_batch)
+                output_grad_dx = output_grad[:, 0, :, :].contiguous().view_as(y_batch)
+                output_grad_dy = output_grad[:, 1, :, :].contiguous().view_as(y_batch)
+
+                depth_normal = torch.cat((-depth_grad_dx, -depth_grad_dy, ones), 1)
+                output_normal = torch.cat((-output_grad_dx, -output_grad_dy, ones), 1)
+
+                # depth_normal = F.normalize(depth_normal, p=2, dim=1)
+                # output_normal = F.normalize(output_normal, p=2, dim=1)
+
+                loss_depth = torch.log(torch.abs(y_pred - y_batch) + 0.5).mean()
+                loss_dx = torch.log(torch.abs(output_grad_dx - depth_grad_dx) + 0.5).mean()
+                loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
+                loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
+
+                loss = loss_depth + loss_normal + (loss_dx + loss_dy)
+                # loss = loss_fn(y_pred, y_batch)
+                losses.update(loss.data[0], image.size(0))
 
                 # Backward pass and optimization
                 loss.backward()
