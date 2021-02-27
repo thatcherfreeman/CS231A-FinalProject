@@ -12,6 +12,7 @@ import tensorflow as tf
 from args import add_train_args, add_experiment, add_common_args, save_arguments
 import models
 import model_utils
+import sobel
 
 
 def train_model(
@@ -30,11 +31,8 @@ def train_model(
     saved_checkpoints = []
     writer = SummaryWriter(log_dir=f'{args.log_dir}/{args.experiment}')
 
-    criterion = nn.L1Loss()
-    batch_time = AverageMeter()
-    losses = AverageMeter()
     cos = nn.CosineSimilarity(dim=1, eps=0)
-    get_gradient = sobel.Sobel().cuda()
+    get_gradient: nn.Module = sobel.Sobel().to(device)
 
     for e in range(1, args.train_epochs + 1):
         print(f'Training epoch {e}...')
@@ -45,14 +43,14 @@ def train_model(
             model.train()
             for i, (x_batch, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch, y_batch)
-                # x_batch = x_batch.to(device)
-                # y_batch = y_batch.to(device)
-                y_batch = y_batch.cuda(non_blocking=True)
-                x_batch = x_batch.cuda()
+                x_batch = x_batch.to(device)
+                y_batch = y_batch.to(device)
+                # y_batch = y_batch.cuda(non_blocking=True)
+                # x_batch = x_batch.cuda()
                 x_batch = torch.autograd.Variable(x_batch)
                 y_batch = torch.autograd.Variable(y_batch)
 
-                ones = torch.ones(y_batch.size(0), 1, y_batch.size(2),y_batch.size(3)).float().cuda()
+                ones = torch.ones(y_batch.shape, dtype=torch.float32).to(device)
                 ones = torch.autograd.Variable(ones)
 
                 # Forward pass on model
@@ -79,7 +77,6 @@ def train_model(
 
                 loss = loss_depth + loss_normal + (loss_dx + loss_dy)
                 # loss = loss_fn(y_pred, y_batch)
-                losses.update(loss.data[0], image.size(0))
 
                 # Backward pass and optimization
                 loss.backward()
