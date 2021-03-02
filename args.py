@@ -130,12 +130,6 @@ def add_make_diagram_args(parser: argparse.ArgumentParser) -> None:
         default='diagrams',
         help='Folder to save diagrams into'
     )
-    parser.add_argument(
-        '--name',
-        type=str,
-        default=None,
-        help='Name of model (for file naming).'
-    )
 
 
 def add_test_args(parser: argparse.ArgumentParser) -> None:

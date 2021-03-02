@@ -6,5 +6,6 @@
 *.DS_Store
 .mypy_cache*
 tmp*
+diagrams*
 logs*
 checkpoints*
