@@ -178,6 +178,37 @@ def make_diagram(image: np.ndarray, input_image: np.ndarray, gt_depth: np.ndarra
     plt.savefig(filename, dpi=640)
     plt.close()
 
+
+def make_3_col_diagram(image: np.ndarray, gt_depth: np.ndarray, pred_depth: np.ndarray, filename: str):
+    '''
+    image shape N, 3, H, W
+    input_image shape N, 3, H, W
+    gt_depth shape N, 1, H, W
+    pred_depth shape N, 1, H, W
+    filename str to save image into
+    '''
+    image = np.clip(image[0] / 255, 0, 1)
+    gt_depth = gt_depth[0, 0]
+    pred_depth = pred_depth[0, 0]
+    image = np.transpose(image, axes=(1, 2, 0))
+
+    depth_min = 0
+    depth_max = max(np.max(pred_depth), np.max(gt_depth))
+    plt.figure(figsize=(6,1.25))
+    plt.subplot(1, 3, 1)
+    plt.axis('off')
+    plt.imshow(image)
+    plt.subplot(1, 3, 2)
+    plt.axis('off')
+    plt.imshow(gt_depth, cmap='gray', vmin=depth_min, vmax=depth_max)
+    plt.subplot(1, 3, 3)
+    plt.axis('off')
+    im = plt.imshow(pred_depth, cmap='gray', vmin=depth_min, vmax=depth_max)
+    # _add_colorbar(im)
+
+    plt.savefig(filename, dpi=640)
+    plt.close()
+
 def _add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     """Add a vertical color bar to an image plot."""
     divider = axes_grid1.make_axes_locatable(im.axes)

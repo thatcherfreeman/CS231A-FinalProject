@@ -111,6 +111,32 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         help='Give the model a name that will be a part of the experiment path.',
     )
 
+def add_make_diagram_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        '--num_images',
+        type=int,
+        default=5,
+        help='Selects the number of images to make.',
+    )
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        default=1,
+        help='Number of images to process at once. Don\'t change this one.',
+    )
+    parser.add_argument(
+        '--save_dir',
+        type=str,
+        default='diagrams',
+        help='Folder to save diagrams into'
+    )
+    parser.add_argument(
+        '--name',
+        type=str,
+        default=None,
+        help='Name of model (for file naming).'
+    )
+
 
 def add_test_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
