@@ -26,7 +26,7 @@ def train_model(
 ) -> nn.Module:
 
     device = model_utils.get_device()
-    loss_fn = model_utils.l1_norm_loss # TODO: Set this to the correct loss fn
+    loss_fn = model_utils.depth_proportional_loss # TODO: Set this to the correct loss fn
     val_loss_fn = model_utils.l1_norm_loss # TODO: Set this to the correct loss fn
     best_val_loss = torch.tensor(float('inf'))
     saved_checkpoints = []
@@ -76,8 +76,8 @@ def train_model(
                 loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
                 loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
 
-                loss = loss_depth + loss_normal + (loss_dx + loss_dy)
-                # loss = loss_fn(y_pred, y_batch)
+                # loss = loss_depth + loss_normal + (loss_dx + loss_dy)
+                loss = loss_fn(y_pred, y_batch)
 
                 # Backward pass and optimization
                 loss.backward()

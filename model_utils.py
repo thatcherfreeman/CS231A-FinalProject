@@ -125,6 +125,9 @@ def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple
     image = torch.Tensor(np_image).permute(0, 3, 1, 2)
     return image, depth
 
+def depth_proportional_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    mask = target > 0
+    return torch.mean(torch.abs(pred[mask] - target[mask]) / target[mask])
 
 def l1_log_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
     return torch.mean(torch.log(torch.abs(input - pos_target)))
