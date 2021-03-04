@@ -44,8 +44,8 @@ def train_model(
             model.train()
             for i, (x_batch_orig, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch_orig, y_batch)
-                x_batch = x_batch.to(device)
-                y_batch = y_batch.to(device)
+                # x_batch = x_batch.to(device)
+                # y_batch = y_batch.to(device)
                 # y_batch = y_batch.cuda(non_blocking=True)
                 # x_batch = x_batch.cuda()
                 x_batch = torch.autograd.Variable(x_batch)

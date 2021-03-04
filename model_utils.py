@@ -75,9 +75,10 @@ def preprocess_training_example(np_image: np.ndarray, np_depth: np.ndarray) -> T
     '''
 
     # Consider moving to device before data augmentation.
-    depth = torch.Tensor(np_depth)
+    device = get_device()
+    depth = torch.Tensor(np_depth).to(device)
     depth = torch.unsqueeze(depth, 1)
-    image = torch.Tensor(np_image).permute(0, 3, 1, 2)
+    image = torch.Tensor(np_image).to(device).permute(0, 3, 1, 2)
 
     N, C, H, W = image.size()
 
@@ -120,14 +121,14 @@ def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple
     '''
     # Resize for model input if necessary
     # Don't do random crop/jitter/flip
-    depth = torch.Tensor(np_depth)
+    device = get_device()
+    depth = torch.Tensor(np_depth).to(device)
     depth = torch.unsqueeze(depth, 1)
-    image = torch.Tensor(np_image).permute(0, 3, 1, 2)
+    image = torch.Tensor(np_image).to(device).permute(0, 3, 1, 2)
     return image, depth
 
 def depth_proportional_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    mask = target > 0
-    return torch.mean(torch.abs(pred[mask] - target[mask]) / target[mask])
+    return torch.mean(torch.abs(pred - target) / (target + 0.5))
 
 def l1_log_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
     return torch.mean(torch.log(torch.abs(input - pos_target)))
@@ -140,7 +141,7 @@ def l2_norm_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
 
 def verify_versions() -> None:
     # Version 1.5.0 has a bug where certain type annotations don't pass typecheck
-    assert torch.__version__ == '1.7.1', 'Incorrect torch version installed!'
+    assert torch.__version__.startswith('1.7.1'), 'Incorrect torch version installed!'
 
 
 def count_parameters(model):
