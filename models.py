@@ -7,12 +7,34 @@ from torchvision.models import resnet
 
 class Baseline(nn.Module):
     '''
-    Baseline U-net model, consisting of pretrained resnet encoder
+    Baseline U-net model, consisting of pretrained resnet18 encoder
     and a decoder with skip connections.
     '''
     def __init__(self):
         super(Baseline, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet18')
+        block_channels = [64, 128, 256, 512]
+        self.decoder = SkipDecoder(block_channels)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        '''
+        Input:
+            x shape N, C, H, W
+        Output:
+            y shape N, 1, H, W
+        '''
+        block1, block2, block3, block4 = self.encoder(x)
+        out = self.decoder(block1, block2, block3, block4)
+        return out
+
+class Baseline34(nn.Module):
+    '''
+    Baseline U-net model, consisting of pretrained resnet34 encoder
+    and a decoder with skip connections.
+    '''
+    def __init__(self):
+        super(Baseline34, self).__init__()
+        self.encoder = E_resnet(pretrained=True, resnet_type='resnet34')
         block_channels = [64, 128, 256, 512]
         self.decoder = SkipDecoder(block_channels)
 
@@ -189,7 +211,7 @@ class Decoder(nn.Module):
         self.up1 = UpProjection(block_channels[3], block_channels[2], scale=2)
         self.up2 = UpProjection(block_channels[2], block_channels[1], scale=2)
         self.up3 = UpProjection(block_channels[1], block_channels[0], scale=2)
-        self.up4 = UpProjection(block_channels[0], block_channels[0], scale=4, ksize=5)
+        self.up4 = UpProjection(block_channels[0], block_channels[0], scale=4, ksize=3)
 
     def forward(
         self,
@@ -217,15 +239,19 @@ class Decoder(nn.Module):
 class UpProjection(nn.Sequential):
     def __init__(self, input_features: int, output_features: int, scale: int=2, ksize=3):
         super(UpProjection, self).__init__()
+
+        self.conv0 = nn.Conv2d(input_features, output_features, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn0 = nn.BatchNorm2d(output_features)
+
         self.scale = scale
-        self.conv1 = nn.Conv2d(input_features, output_features,
+        self.conv1 = nn.Conv2d(output_features, output_features,
                                kernel_size=ksize, stride=1, padding=ksize//2, bias=False)
         self.bn1 = nn.BatchNorm2d(output_features)
         self.relu = nn.ReLU(inplace=True)
         self.conv1_2 = nn.Conv2d(output_features, output_features,
                                  kernel_size=ksize, stride=1, padding=ksize//2, bias=False)
         self.bn1_2 = nn.BatchNorm2d(output_features)
-        self.conv2 = nn.Conv2d(input_features, output_features,
+        self.conv2 = nn.Conv2d(output_features, output_features,
                                kernel_size=ksize, stride=1, padding=ksize//2, bias=False)
         self.bn2 = nn.BatchNorm2d(output_features)
 
@@ -240,6 +266,11 @@ class UpProjection(nn.Sequential):
         if block is not None:
             x = torch.cat([x, block], dim=1) # concatenate along channels
 
+        # Cut down number of filters before upscaling
+        x = self.conv0(x)
+        x = self.bn0(x)
+        x = self.relu(x)
+
         x = F.interpolate(x, scale_factor=self.scale, mode='bilinear', align_corners=True)
         x_conv1 = self.relu(self.bn1(self.conv1(x)))
         bran1 = self.bn1_2(self.conv1_2(x_conv1))
@@ -251,7 +282,7 @@ class UpProjection(nn.Sequential):
 # https://github.com/JunjH/Revisiting_Single_Depth_Estimation/blob/master/models/modules.py#L153-L185
 class MFF(nn.Module):
 
-    def __init__(self, block_channel: Tuple[int,int,int,int], num_features=64):
+    def __init__(self, block_channel: Tuple[int,int,int,int], num_features: int=64):
 
         super(MFF, self).__init__()
 
@@ -286,21 +317,21 @@ class MFF(nn.Module):
 # Copied from
 # https://github.com/JunjH/Revisiting_Single_Depth_Estimation/blob/master/models/modules.py#L188-L216
 class Refinement(nn.Module):
-    def __init__(self, block_channel:Tuple[int,int,int,int]):
+    def __init__(self, block_channel:Tuple[int,int,int,int], ksize:int=3):
 
         super(Refinement, self).__init__()
 
         num_features = 64 + block_channel[0]
         self.conv0 = nn.Conv2d(num_features, num_features,
-                               kernel_size=5, stride=1, padding=1, bias=False)
+                               kernel_size=ksize, stride=1, padding=ksize//2, bias=False)
         self.bn0 = nn.BatchNorm2d(num_features)
 
         self.conv1 = nn.Conv2d(num_features, num_features,
-                               kernel_size=5, stride=1, padding=1, bias=False)
+                               kernel_size=ksize, stride=1, padding=ksize//2, bias=False)
         self.bn1 = nn.BatchNorm2d(num_features)
 
         self.conv2 = nn.Conv2d(
-            num_features, 1, kernel_size=5, stride=1, padding=1, bias=True)
+            num_features, 1, kernel_size=ksize, stride=1, padding=ksize//2, bias=True)
 
     def forward(self, decoder_output, mff_output):
         x = torch.cat([decoder_output, mff_output], dim=1)
@@ -318,7 +349,7 @@ class Refinement(nn.Module):
 
 
 def get_model(model_name: str) -> type:
-    models = [Baseline, Hu18, Hu50, Hu34]
+    models = [Baseline, Baseline34, Hu18, Hu50, Hu34]
     for m in models:
         if m.__name__ == model_name:
             return m

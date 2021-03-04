@@ -95,7 +95,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--model',
         type=str,
-        default='Baseline',
+        default='Hu34',
         help='choose the model to train',
     )
     parser.add_argument(
