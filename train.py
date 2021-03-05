@@ -38,6 +38,9 @@ def train_model(
     for e in range(1, args.train_epochs + 1):
         print(f'Training epoch {e}...')
 
+        if args.use_scheduler:
+            lr_scheduler.step()
+
         # Training portion
         torch.cuda.empty_cache()
         with tqdm(total=args.train_batch_size * len(train_ds)) as progress_bar:
@@ -82,8 +85,6 @@ def train_model(
                 # Backward pass and optimization
                 loss.backward()
                 optimizer.step()
-                if args.use_scheduler:
-                    lr_scheduler.step(loss)
 
                 progress_bar.update(len(x_batch))
                 progress_bar.set_postfix(loss=loss.item())
@@ -189,6 +190,10 @@ def main():
         factor=0.5,
         patience=30,
         verbose=True,
+    )
+
+    scheduler = optim.lr_scheduler.StepLR(
+        optimizer, 5, 0.1, verbose=True
     )
 
     os.makedirs(f'{args.save_path}/{args.experiment}')
