@@ -39,18 +39,16 @@ def test_model(
     with tqdm(total=args.batch_size * len(dev_dl)) as progress_bar:
         for i, (x_batch_orig, y_batch) in enumerate(dev_dl.as_numpy_iterator()):
             x_batch, y_batch = model_utils.preprocess_test_example(x_batch_orig, y_batch)
-            x_batch = x_batch.to(device)
-            y_batch = y_batch.to(device)
 
             # Forward pass on model
-            y_pred = model(x_batch).detach()
+            y_pred = model(x_batch)
 
             # TODO: Process y_pred in the optimal way (round it off, etc)
             # Maybe clamp from 0 to infty or something
             nanmask = getNanMask(y_batch)
             total_pixels = torch.sum(~nanmask)
             total_examples += x_batch.shape[0]
-            
+
             # RMS, REL, LOG10, threshold calculation
             squared_error += (torch.sum(torch.pow(y_pred - y_batch, 2)).item() / total_pixels)**0.5
             rel_error += torch.sum(torch.abs(y_pred - y_batch) / y_batch).item() / total_pixels
