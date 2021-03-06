@@ -148,12 +148,12 @@ def train_model(
                 del y_pred
                 del loss
 
-            writer.add_scalar("Val/RMS", squared_error / total_examples, e * total_examples)
-            writer.add_scalar("Val/REL", rel_error / total_examples, e * total_examples)
-            writer.add_scalar("Val/LOG10", log_error / total_examples, e * total_examples)
-            writer.add_scalar("Val/delta1", threshold1 / total_examples, e * total_examples)
-            writer.add_scalar("Val/delta2", threshold2 / total_examples, e * total_examples)
-            writer.add_scalar("Val/delta3", threshold3 / total_examples, e * total_examples)
+            writer.add_scalar("Val/RMS", squared_error / total_examples, e)
+            writer.add_scalar("Val/REL", rel_error / total_examples, e)
+            writer.add_scalar("Val/LOG10", log_error / total_examples, e)
+            writer.add_scalar("Val/delta1", threshold1 / total_examples, e)
+            writer.add_scalar("Val/delta2", threshold2 / total_examples, e)
+            writer.add_scalar("Val/delta3", threshold3 / total_examples, e)
 
             # Save model if it's the best one yet.
             if val_loss / num_batches_processed < best_val_loss:
