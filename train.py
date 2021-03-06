@@ -213,14 +213,6 @@ def main():
     )
 
     # Scheduler
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode='min',
-        factor=0.5,
-        patience=30,
-        verbose=True,
-    )
-
     scheduler = optim.lr_scheduler.StepLR(
         optimizer, 5, 0.1, verbose=True
     )
