@@ -108,6 +108,10 @@ def preprocess_training_example(np_image: np.ndarray, np_depth: np.ndarray) -> T
 
     return image, depth
 
+def blur_depth_map(depth: torch.Tensor) -> torch.Tensor:
+    depth2 = tv_f.gaussian_blur(depth, 7)
+    return depth2
+
 def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
     '''
     @Param image ndarray of shape N, H, W, C

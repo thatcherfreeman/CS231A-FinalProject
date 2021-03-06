@@ -48,6 +48,8 @@ def train_model(
             model.train()
             for i, (x_batch_orig, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch_orig, y_batch)
+                # y_blurred = model_utils.blur_depth_map(y_batch)
+                y_blurred = y_batch
 
                 ones = torch.ones(y_batch.shape, dtype=torch.float32, device=device)
 
@@ -55,11 +57,11 @@ def train_model(
                 optimizer.zero_grad()
                 y_pred = model(x_batch)
 
-                depth_grad = get_gradient(y_batch)
+                depth_grad = get_gradient(y_blurred)
                 output_grad = get_gradient(y_pred)
-                depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(y_batch)
+                depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(y_blurred)
                 depth_grad_dy = depth_grad[:, 1, :, :].contiguous().view_as(y_batch)
-                output_grad_dx = output_grad[:, 0, :, :].contiguous().view_as(y_batch)
+                output_grad_dx = output_grad[:, 0, :, :].contiguous().view_as(y_blurred)
                 output_grad_dy = output_grad[:, 1, :, :].contiguous().view_as(y_batch)
 
                 depth_normal = torch.cat((-depth_grad_dx, -depth_grad_dy, ones), 1)
@@ -96,6 +98,7 @@ def train_model(
 
                 del x_batch
                 del y_batch
+                del y_blurred
                 del y_pred
                 del loss
 
@@ -118,7 +121,6 @@ def train_model(
 
             for i, (x_batch, y_batch) in enumerate(dev_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_test_example(x_batch, y_batch)
-
                 # Forward pass on model in validation environment
                 y_pred = model(x_batch)
 
@@ -194,6 +196,8 @@ def main():
 
     # Load dataset from disk
     train_ds, dev_ds = model_utils.load_training_data(args)
+    train_ds = train_ds.take(2)
+    dev_ds = dev_ds.take(2)
 
     # Initialize a model
     model = models.get_model(args.model)()
