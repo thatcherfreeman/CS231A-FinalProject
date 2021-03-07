@@ -75,8 +75,8 @@ def train_model(
                 loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
                 loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
 
-                loss = loss_depth + loss_normal + (loss_dx + loss_dy)
-                # loss = loss_fn(y_pred, y_batch)
+                # loss = loss_depth + loss_normal + (loss_dx + loss_dy)
+                loss = 3 * loss_fn(y_pred, y_batch) + loss_normal + loss_dx + loss_dy
 
                 # Backward pass and optimization
                 loss.backward()
