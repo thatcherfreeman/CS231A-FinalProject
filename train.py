@@ -48,8 +48,8 @@ def train_model(
             model.train()
             for i, (x_batch_orig, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch_orig, y_batch)
-                # y_blurred = model_utils.blur_depth_map(y_batch)
-                y_blurred = y_batch
+                y_blurred = model_utils.blur_depth_map(y_batch)
+                # y_blurred = y_batch
 
                 ones = torch.ones(y_batch.shape, dtype=torch.float32, device=device)
 
@@ -196,8 +196,6 @@ def main():
 
     # Load dataset from disk
     train_ds, dev_ds = model_utils.load_training_data(args)
-    train_ds = train_ds.take(2)
-    dev_ds = dev_ds.take(2)
 
     # Initialize a model
     model = models.get_model(args.model)()
