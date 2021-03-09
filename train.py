@@ -135,7 +135,7 @@ def train_model(
 
                 # RMS, REL, LOG10, threshold calculation
                 squared_error += (torch.sum(torch.pow(y_pred - y_batch, 2)).item() / total_pixels)**0.5
-                rel_error += torch.sum(torch.abs(y_pred - y_batch) / y_batch).item() / total_pixels
+                rel_error += torch.sum(removeNans(torch.abs(y_pred - y_batch) / y_batch)).item() / total_pixels
                 log_error += torch.sum(torch.abs(removeNans(torch.log10(y_pred)) - removeNans(torch.log10(y_batch)))).item() / total_pixels
                 threshold1 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25).item() / total_pixels
                 threshold2 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**2).item() / total_pixels
