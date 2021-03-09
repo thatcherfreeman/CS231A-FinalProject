@@ -126,7 +126,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         '--size',
         type=int,
         nargs='+',
-        default=(192,256),
+        default=(288,384),
         help='specify the internal processing size of the model'
     )
 
