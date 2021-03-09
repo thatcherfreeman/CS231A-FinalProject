@@ -1,7 +1,7 @@
 import argparse
 import os
 import json
-from typing import Tuple
+from typing import Any, Tuple, Dict
 
 
 def add_experiment(args: argparse.Namespace) -> None:
@@ -16,6 +16,11 @@ def add_experiment(args: argparse.Namespace) -> None:
 def save_arguments(args: argparse.Namespace, filename: str) -> None:
     with open(filename, 'w') as f:
         json.dump(args.__dict__, f)
+
+def load_arguments(filename: str) -> Dict[str, Any]:
+    with open(filename, 'r') as f:
+        obj = json.load(f)
+        return obj
 
 
 def add_train_args(parser: argparse.ArgumentParser) -> None:
@@ -103,7 +108,13 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         '--load_path',
         type=str,
         default=None,
-        help='specify path to load the model at the given path before training.'
+        help='specify path to .checkpoint file to load the model at the given path before training.'
+    )
+    parser.add_argument(
+        '--load_dir',
+        type=str,
+        default=None,
+        help='specify path to folder containing .checkpoint files.'
     )
     parser.add_argument(
         '--name',

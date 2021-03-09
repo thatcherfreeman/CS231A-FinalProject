@@ -59,7 +59,7 @@ def main():
     dev_dl = dev_dl.take(args.num_images)
 
     # Initialize a model
-    model = models.get_model(args.model)()
+    model = models.get_model(args.model)(args.size)
 
     # load from checkpoint if path specified
     assert args.load_path is not None

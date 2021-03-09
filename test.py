@@ -1,5 +1,6 @@
 import argparse
 import os
+from typing import Dict
 
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ import tensorflow as tf
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm # type: ignore
 
-from args import add_test_args, add_common_args
+from args import add_test_args, add_common_args, load_arguments
 import models
 import model_utils
 
@@ -66,14 +67,20 @@ def test_model(
 
     print('\n  Calculating overall metrics...')
     print()
-    print('*' * 30)
-    print(f'RMS:   {squared_error / total_examples}')
-    print(f'REL:   {rel_error / total_examples}')
-    print(f'LOG10: {log_error / total_examples}')
-    print(f'delta1:{threshold1 / total_examples}')
-    print(f'delta2:{threshold2 / total_examples}')
-    print(f'delta3:{threshold3 / total_examples}')
-    print('*' * 30)
+    output_str = ''
+    output_str += '*' * 30 + '\n'
+    output_str += f'RMS:   {squared_error / total_examples}\n'
+    output_str += f'REL:   {rel_error / total_examples}\n'
+    output_str += f'LOG10: {log_error / total_examples}\n'
+    output_str += f'delta1:{threshold1 / total_examples}\n'
+    output_str += f'delta2:{threshold2 / total_examples}\n'
+    output_str += f'delta3:{threshold3 / total_examples}\n'
+    output_str += '*' * 30
+    print(output_str)
+
+    if args.load_dir is not None:
+        with open(f'{args.load_dir}/test_results.txt', 'w') as f:
+            f.write(output_str)
 
     return model
 
@@ -93,6 +100,13 @@ def main():
     add_common_args(parser)
     args = parser.parse_args()
     device = model_utils.get_device()
+    assert args.load_path is not None or args.load_dir is not None
+
+    if args.load_dir is not None:
+        prev_args: Dict = load_arguments(f'{args.load_dir}/args.txt')
+        args.model = prev_args['model']
+        args.size = prev_args['size']
+        args.name = prev_args['experiment']
 
     # Load dataset from disk
     dev_dl = model_utils.load_test_data(args)
@@ -101,8 +115,10 @@ def main():
     model = models.get_model(args.model)(size=args.size)
 
     # load from checkpoint if path specified
-    assert args.load_path is not None
-    model = model_utils.load_model(model, args.load_path)
+    if args.load_path is not None:
+        model = model_utils.load_model(model, args.load_path)
+    else:
+        model = model_utils.load_model(model, f'{args.load_dir}/{args.model}_best_val.checkpoint')
     model.eval()
 
     # Move model to GPU if necessary
