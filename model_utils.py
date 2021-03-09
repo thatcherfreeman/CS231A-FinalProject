@@ -132,7 +132,8 @@ def preprocess_test_example(np_image: np.ndarray, np_depth: np.ndarray) -> Tuple
     return image, depth
 
 def depth_proportional_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    return torch.mean(torch.log(torch.abs(pred - target) + 0.5) / (target + 0.5))
+    target_aug = target + 0.5
+    return torch.mean(target_aug) * torch.mean(torch.log(torch.abs(pred - target) + 0.5) / (target_aug))
 
 def l1_log_loss(input: torch.Tensor, pos_target: torch.Tensor) -> torch.Tensor:
     return torch.mean(torch.log(torch.abs(input - pos_target)))
