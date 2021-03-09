@@ -59,6 +59,14 @@ def test_model(
             threshold3 += torch.sum(torch.max(y_pred / y_batch, y_batch / y_pred) < 1.25**3).item() / total_pixels
             # total_pixels += np.prod(y_batch.shape)
 
+            if i < args.num_images:
+                model_utils.make_3_col_diagram(
+                    x_batch.cpu().numpy(),
+                    y_batch.cpu().numpy(),
+                    y_pred.cpu().numpy(),
+                    f'{args.save_dir}/{args.name}/{args.name}_{i}.png',
+                )
+
             progress_bar.update(len(x_batch))
 
             del x_batch
@@ -107,6 +115,9 @@ def main():
         args.model = prev_args['model']
         args.size = prev_args['size']
         args.name = prev_args['experiment']
+
+    assert args.name is not None
+    os.makedirs(f'{args.save_dir}/{args.name}')
 
     # Load dataset from disk
     dev_dl = model_utils.load_test_data(args)

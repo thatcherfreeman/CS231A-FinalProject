@@ -10,7 +10,7 @@ import tensorflow as tf
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm # type: ignore
 
-from args import add_make_diagram_args, add_test_args, add_common_args
+from args import add_test_args, add_common_args
 import models
 import model_utils
 
@@ -46,7 +46,7 @@ def make_images(
 
 def main():
     parser = argparse.ArgumentParser()
-    add_make_diagram_args(parser)
+    add_test_args(parser)
     add_common_args(parser)
     args = parser.parse_args()
     device = model_utils.get_device()

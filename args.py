@@ -130,7 +130,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         help='specify the internal processing size of the model'
     )
 
-def add_make_diagram_args(parser: argparse.ArgumentParser) -> None:
+def add_test_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--num_images',
         type=int,
@@ -148,13 +148,4 @@ def add_make_diagram_args(parser: argparse.ArgumentParser) -> None:
         type=str,
         default='diagrams',
         help='Folder to save diagrams into'
-    )
-
-
-def add_test_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        '--batch_size',
-        type=int,
-        default=1,
-        help='mini-batch size',
     )
