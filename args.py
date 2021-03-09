@@ -113,7 +113,8 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         '--size',
-        type=Tuple[int, int],
+        type=int,
+        nargs='+',
         default=(192,256),
         help='specify the internal processing size of the model'
     )
