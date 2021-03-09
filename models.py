@@ -25,10 +25,10 @@ class Baseline(nn.Module):
             y shape N, 1, H, W
         '''
         N, C, H, W = x.shape
-        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
+        x = F.interpolate(x, size=self.size, mode='area')
         block1, block2, block3, block4 = self.encoder(x)
         out = self.decoder(block1, block2, block3, block4)
-        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bicubic')
         return out
 
 class Baseline34(nn.Module):
@@ -51,10 +51,10 @@ class Baseline34(nn.Module):
             y shape N, 1, H, W
         '''
         N, C, H, W = x.shape
-        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
+        x = F.interpolate(x, size=self.size, mode='area')
         block1, block2, block3, block4 = self.encoder(x)
         out = self.decoder(block1, block2, block3, block4)
-        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bicubic')
         return out
 
 class Hu18(nn.Module):
@@ -72,12 +72,12 @@ class Hu18(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         N, C, H, W = x.shape
-        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
+        x = F.interpolate(x, size=self.size, mode='area')
         block1, block2, block3, block4 = self.encoder(x)
         decoder_output = self.decoder(block4)
         mff_output = self.mff(block1, block2, block3, block4)
         out = self.refinement(decoder_output, mff_output)
-        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bicubic')
         return out
 
 
@@ -96,12 +96,12 @@ class Hu34(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         N, C, H, W = x.shape
-        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
+        x = F.interpolate(x, size=self.size, mode='area')
         block1, block2, block3, block4 = self.encoder(x)
         decoder_output = self.decoder(block4)
         mff_output = self.mff(block1, block2, block3, block4)
         out = self.refinement(decoder_output, mff_output)
-        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bicubic')
         return out
 
 
@@ -120,12 +120,12 @@ class Hu50(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         N, C, H, W = x.shape
-        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
+        x = F.interpolate(x, size=self.size, mode='area')
         block1, block2, block3, block4 = self.encoder(x)
         decoder_output = self.decoder(block4)
         mff_output = self.mff(block1, block2, block3, block4)
         out = self.refinement(decoder_output, mff_output)
-        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bicubic')
         return out
 
 
