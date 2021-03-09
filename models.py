@@ -10,11 +10,12 @@ class Baseline(nn.Module):
     Baseline U-net model, consisting of pretrained resnet18 encoder
     and a decoder with skip connections.
     '''
-    def __init__(self):
+    def __init__(self, size: Tuple[int, int]=(192, 256)):
         super(Baseline, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet18')
         block_channels = [64, 128, 256, 512]
         self.decoder = SkipDecoder(block_channels)
+        self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
@@ -23,8 +24,11 @@ class Baseline(nn.Module):
         Output:
             y shape N, 1, H, W
         '''
+        N, C, H, W = x.shape
+        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
         block1, block2, block3, block4 = self.encoder(x)
         out = self.decoder(block1, block2, block3, block4)
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
         return out
 
 class Baseline34(nn.Module):
@@ -32,11 +36,12 @@ class Baseline34(nn.Module):
     Baseline U-net model, consisting of pretrained resnet34 encoder
     and a decoder with skip connections.
     '''
-    def __init__(self):
+    def __init__(self, size: Tuple[int, int]=(192, 256)):
         super(Baseline34, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet34')
         block_channels = [64, 128, 256, 512]
         self.decoder = SkipDecoder(block_channels)
+        self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
@@ -45,27 +50,34 @@ class Baseline34(nn.Module):
         Output:
             y shape N, 1, H, W
         '''
+        N, C, H, W = x.shape
+        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
         block1, block2, block3, block4 = self.encoder(x)
         out = self.decoder(block1, block2, block3, block4)
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
         return out
 
 class Hu18(nn.Module):
     '''
     Adapted model from hu et al, with resnet 18 encoder.
     '''
-    def __init__(self):
+    def __init__(self, size: Tuple[int, int]=(192, 256)):
         super(Hu18, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet18')
         block_channels = [64, 128, 256, 512]
         self.decoder = Decoder(block_channels)
         self.mff = MFF(block_channels)
         self.refinement = Refinement(block_channels)
+        self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        N, C, H, W = x.shape
+        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
         block1, block2, block3, block4 = self.encoder(x)
         decoder_output = self.decoder(block4)
         mff_output = self.mff(block1, block2, block3, block4)
         out = self.refinement(decoder_output, mff_output)
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
         return out
 
 
@@ -73,19 +85,23 @@ class Hu34(nn.Module):
     '''
     Adapted model from hu et al, with resnet 34 encoder.
     '''
-    def __init__(self):
+    def __init__(self, size: Tuple[int, int]=(192, 256)):
         super(Hu34, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet34')
         block_channels = [64, 128, 256, 512]
         self.decoder = Decoder(block_channels)
         self.mff = MFF(block_channels)
         self.refinement = Refinement(block_channels)
+        self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        N, C, H, W = x.shape
+        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
         block1, block2, block3, block4 = self.encoder(x)
         decoder_output = self.decoder(block4)
         mff_output = self.mff(block1, block2, block3, block4)
         out = self.refinement(decoder_output, mff_output)
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
         return out
 
 
@@ -93,19 +109,23 @@ class Hu50(nn.Module):
     '''
     Adapted model from hu et al, with resnet 50 encoder.
     '''
-    def __init__(self):
+    def __init__(self, size: Tuple[int, int]=(192, 256)):
         super(Hu50, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet50')
         block_channels = [256, 512, 1024, 2048]
         self.decoder = Decoder(block_channels)
         self.mff = MFF(block_channels)
         self.refinement = Refinement(block_channels)
+        self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        N, C, H, W = x.shape
+        x = F.interpolate(x, size=self.size, align_corners=True, mode='bilinear')
         block1, block2, block3, block4 = self.encoder(x)
         decoder_output = self.decoder(block4)
         mff_output = self.mff(block1, block2, block3, block4)
         out = self.refinement(decoder_output, mff_output)
+        out = F.interpolate(out, size=(H, W), align_corners=True, mode='bilinear')
         return out
 
 

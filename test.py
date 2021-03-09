@@ -98,7 +98,7 @@ def main():
     dev_dl = model_utils.load_test_data(args)
 
     # Initialize a model
-    model = models.get_model(args.model)()
+    model = models.get_model(args.model)(size=args.size)
 
     # load from checkpoint if path specified
     assert args.load_path is not None

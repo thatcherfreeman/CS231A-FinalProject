@@ -198,7 +198,7 @@ def main():
     train_ds, dev_ds = model_utils.load_training_data(args)
 
     # Initialize a model
-    model = models.get_model(args.model)()
+    model = models.get_model(args.model)(size=args.size)
 
     # load from checkpoint if path specified
     if args.load_path is not None:

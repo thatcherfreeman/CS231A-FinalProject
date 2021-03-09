@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+from typing import Tuple
 
 
 def add_experiment(args: argparse.Namespace) -> None:
@@ -109,6 +110,12 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         type=str,
         default=None,
         help='Give the model a name that will be a part of the experiment path.',
+    )
+    parser.add_argument(
+        '--size',
+        type=Tuple[int, int],
+        default=(192,256),
+        help='specify the internal processing size of the model'
     )
 
 def add_make_diagram_args(parser: argparse.ArgumentParser) -> None:
