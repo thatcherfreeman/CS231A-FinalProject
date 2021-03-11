@@ -10,11 +10,11 @@ class Baseline(nn.Module):
     Baseline U-net model, consisting of pretrained resnet18 encoder
     and a decoder with skip connections.
     '''
-    def __init__(self, size: Tuple[int, int]=(192, 256)):
+    def __init__(self, size: Tuple[int, int]=(192, 256), ksize: int =3):
         super(Baseline, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet18')
         block_channels = [64, 128, 256, 512]
-        self.decoder = SkipDecoder(block_channels)
+        self.decoder = SkipDecoder(block_channels, ksize=ksize)
         self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -36,11 +36,11 @@ class Baseline34(nn.Module):
     Baseline U-net model, consisting of pretrained resnet34 encoder
     and a decoder with skip connections.
     '''
-    def __init__(self, size: Tuple[int, int]=(192, 256)):
+    def __init__(self, size: Tuple[int, int]=(192, 256), ksize: int = 3):
         super(Baseline34, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet34')
         block_channels = [64, 128, 256, 512]
-        self.decoder = SkipDecoder(block_channels)
+        self.decoder = SkipDecoder(block_channels, ksize=ksize)
         self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -61,13 +61,13 @@ class Hu18(nn.Module):
     '''
     Adapted model from hu et al, with resnet 18 encoder.
     '''
-    def __init__(self, size: Tuple[int, int]=(192, 256)):
+    def __init__(self, size: Tuple[int, int]=(192, 256), ksize=3):
         super(Hu18, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet18')
         block_channels = [64, 128, 256, 512]
-        self.decoder = Decoder(block_channels)
-        self.mff = MFF(block_channels)
-        self.refinement = Refinement(block_channels)
+        self.decoder = Decoder(block_channels, ksize=ksize)
+        self.mff = MFF(block_channels, ksize=ksize)
+        self.refinement = Refinement(block_channels, ksize=ksize)
         self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -85,13 +85,13 @@ class Hu34(nn.Module):
     '''
     Adapted model from hu et al, with resnet 34 encoder.
     '''
-    def __init__(self, size: Tuple[int, int]=(192, 256)):
+    def __init__(self, size: Tuple[int, int]=(192, 256), ksize=3):
         super(Hu34, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet34')
         block_channels = [64, 128, 256, 512]
-        self.decoder = Decoder(block_channels)
-        self.mff = MFF(block_channels)
-        self.refinement = Refinement(block_channels)
+        self.decoder = Decoder(block_channels, ksize=ksize)
+        self.mff = MFF(block_channels, ksize=ksize)
+        self.refinement = Refinement(block_channels, ksize=ksize)
         self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -109,13 +109,13 @@ class Hu50(nn.Module):
     '''
     Adapted model from hu et al, with resnet 50 encoder.
     '''
-    def __init__(self, size: Tuple[int, int]=(192, 256)):
+    def __init__(self, size: Tuple[int, int] = (192, 256), ksize:int = 3):
         super(Hu50, self).__init__()
         self.encoder = E_resnet(pretrained=True, resnet_type='resnet50')
         block_channels = [256, 512, 1024, 2048]
-        self.decoder = Decoder(block_channels)
-        self.mff = MFF(block_channels)
-        self.refinement = Refinement(block_channels)
+        self.decoder = Decoder(block_channels, ksize=ksize)
+        self.mff = MFF(block_channels, ksize=ksize)
+        self.refinement = Refinement(block_channels, ksize=ksize)
         self.size = size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -182,17 +182,17 @@ class SkipDecoder(nn.Module):
     '''
     Decoder with skip connections from encoder blocks
     '''
-    def __init__(self, block_channels: Tuple[int, int, int, int]):
+    def __init__(self, block_channels: Tuple[int, int, int, int], ksize: int = 3):
         super(SkipDecoder, self).__init__()
         self.conv = nn.Conv2d(block_channels[3], block_channels[2], kernel_size=1, stride=1, bias=False)
         self.bn = nn.BatchNorm2d(block_channels[2])
-        self.up1 = UpProjection(block_channels[2] * 2, block_channels[1], 2)
-        self.up2 = UpProjection(block_channels[1] * 2, block_channels[0], 2)
-        self.up3 = UpProjection(block_channels[0] * 2, block_channels[0], 2)
-        self.up4 = UpProjection(block_channels[0], block_channels[0], 2)
-        self.conv2 = nn.Conv2d(block_channels[0], block_channels[0], kernel_size=3, padding=1, stride=1, bias=False)
+        self.up1 = UpProjection(block_channels[2] * 2, block_channels[1], 2, ksize=ksize)
+        self.up2 = UpProjection(block_channels[1] * 2, block_channels[0], 2, ksize=ksize)
+        self.up3 = UpProjection(block_channels[0] * 2, block_channels[0], 2, ksize=ksize)
+        self.up4 = UpProjection(block_channels[0], block_channels[0], 2, ksize=ksize)
+        self.conv2 = nn.Conv2d(block_channels[0], block_channels[0], kernel_size=ksize, padding=ksize//2, stride=1, bias=False)
         self.bn2 = nn.BatchNorm2d(block_channels[0])
-        self.conv3 = nn.Conv2d(block_channels[0], 1, kernel_size=3, padding=1, stride=1)
+        self.conv3 = nn.Conv2d(block_channels[0], 1, kernel_size=ksize, padding=ksize//2, stride=1)
 
     def forward(
         self,
@@ -226,12 +226,12 @@ class Decoder(nn.Module):
     '''
     Decoder without skip connections from encoder blocks
     '''
-    def __init__(self, block_channels: Tuple[int, int, int, int]):
+    def __init__(self, block_channels: Tuple[int, int, int, int], ksize:int = 3):
         super(Decoder, self).__init__()
-        self.up1 = UpProjection(block_channels[3], block_channels[2], scale=2)
-        self.up2 = UpProjection(block_channels[2], block_channels[1], scale=2)
-        self.up3 = UpProjection(block_channels[1], block_channels[0], scale=2)
-        self.up4 = UpProjection(block_channels[0], block_channels[0], scale=4, ksize=3)
+        self.up1 = UpProjection(block_channels[3], block_channels[2], scale=2, ksize=ksize)
+        self.up2 = UpProjection(block_channels[2], block_channels[1], scale=2, ksize=ksize)
+        self.up3 = UpProjection(block_channels[1], block_channels[0], scale=2, ksize=ksize)
+        self.up4 = UpProjection(block_channels[0], block_channels[0], scale=4, ksize=ksize)
 
     def forward(
         self,
@@ -302,21 +302,21 @@ class UpProjection(nn.Sequential):
 # https://github.com/JunjH/Revisiting_Single_Depth_Estimation/blob/master/models/modules.py#L153-L185
 class MFF(nn.Module):
 
-    def __init__(self, block_channel: Tuple[int,int,int,int], num_features: int=64):
+    def __init__(self, block_channel: Tuple[int,int,int,int], num_features: int=64, ksize=3):
 
         super(MFF, self).__init__()
 
         self.up1 = UpProjection(
-            input_features=block_channel[0], output_features=num_features // 4, scale=4, ksize=3)
+            input_features=block_channel[0], output_features=num_features // 4, scale=4, ksize=ksize)
 
         self.up2 = UpProjection(
-            input_features=block_channel[1], output_features=num_features // 4, scale=8, ksize=3)
+            input_features=block_channel[1], output_features=num_features // 4, scale=8, ksize=ksize)
 
         self.up3 = UpProjection(
-            input_features=block_channel[2], output_features=num_features // 4, scale=16, ksize=3)
+            input_features=block_channel[2], output_features=num_features // 4, scale=16, ksize=ksize)
 
         self.up4 = UpProjection(
-            input_features=block_channel[3], output_features=num_features // 4, scale=32, ksize=3)
+            input_features=block_channel[3], output_features=num_features // 4, scale=32, ksize=ksize)
 
         self.conv1 = nn.Conv2d(
             num_features, num_features, kernel_size=5, stride=1, padding=2, bias=False)

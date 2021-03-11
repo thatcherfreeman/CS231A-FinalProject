@@ -48,8 +48,8 @@ def train_model(
             model.train()
             for i, (x_batch_orig, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch_orig, y_batch)
-                # y_blurred = model_utils.blur_depth_map(y_batch)
-                y_blurred = y_batch
+                y_blurred = model_utils.blur_depth_map(y_batch)
+                # y_blurred = y_batch
 
                 ones = torch.ones(y_batch.shape, dtype=torch.float32, device=device)
 
@@ -76,7 +76,7 @@ def train_model(
                 loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
 
                 loss = loss_depth + loss_normal + (loss_dx + loss_dy)
-                # loss = 3 * loss_fn(y_pred, y_batch) + loss_normal + loss_dx + loss_dy
+                # loss = loss_fn(y_pred, y_batch) + loss_normal + loss_dx + loss_dy
 
                 # Backward pass and optimization
                 loss.backward()
