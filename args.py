@@ -12,7 +12,6 @@ def add_experiment(args: argparse.Namespace) -> None:
     if args.name is not None:
         args.experiment += f'_{args.name}'
 
-
 def save_arguments(args: argparse.Namespace, filename: str) -> None:
     with open(filename, 'w') as f:
         json.dump(args.__dict__, f)
@@ -45,7 +44,7 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--train_epochs',
         type=int,
-        default=3,
+        default=20,
         help='Number of epochs to train for',
     )
     parser.add_argument(
@@ -57,7 +56,7 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--num_checkpoints',
         type=int,
-        default=6,
+        default=20,
         help='Number of checkpoints to keep'
     )
     parser.add_argument(
@@ -101,7 +100,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--model',
         type=str,
-        default='Baseline34',
+        default='Baseline34', # Set to Hu34 for Hu et al. model.
         help='choose the model to train',
     )
     parser.add_argument(

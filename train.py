@@ -26,8 +26,8 @@ def train_model(
 ) -> nn.Module:
 
     device = model_utils.get_device()
-    loss_fn = model_utils.depth_proportional_loss # TODO: Set this to the correct loss fn
-    val_loss_fn = model_utils.l1_norm_loss # TODO: Set this to the correct loss fn
+    loss_fn = model_utils.depth_proportional_loss
+    val_loss_fn = model_utils.l1_norm_loss
     best_val_loss = torch.tensor(float('inf'))
     saved_checkpoints = []
     writer = SummaryWriter(log_dir=f'{args.log_dir}/{args.experiment}')
@@ -49,7 +49,6 @@ def train_model(
             for i, (x_batch_orig, y_batch) in enumerate(train_ds.as_numpy_iterator()):
                 x_batch, y_batch = model_utils.preprocess_training_example(x_batch_orig, y_batch)
                 y_blurred = model_utils.blur_depth_map(y_batch)
-                # y_blurred = y_batch
 
                 ones = torch.ones(y_batch.shape, dtype=torch.float32, device=device)
 
@@ -67,16 +66,12 @@ def train_model(
                 depth_normal = torch.cat((-depth_grad_dx, -depth_grad_dy, ones), 1)
                 output_normal = torch.cat((-output_grad_dx, -output_grad_dy, ones), 1)
 
-                # depth_normal = F.normalize(depth_normal, p=2, dim=1)
-                # output_normal = F.normalize(output_normal, p=2, dim=1)
-
                 loss_depth = torch.log(torch.abs(y_pred - y_batch) + 0.5).mean()
                 loss_dx = torch.log(torch.abs(output_grad_dx - depth_grad_dx) + 0.5).mean()
                 loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
                 loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
 
                 loss = loss_depth + loss_normal + (loss_dx + loss_dy)
-                # loss = loss_fn(y_pred, y_batch) + loss_normal + loss_dx + loss_dy
 
                 # Backward pass and optimization
                 loss.backward()
